@@ -1,0 +1,57 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Spyke — Interactive Neuron Model</title>
+
+    <head>
+
+    <meta charset="utf-8">
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="{% static 'bootstrap-4.1.3-dist/css/bootstrap.min.css' %}">
+    <script src="{% static 'jquery-3.3.1.min.js' %}"> </script>
+    <script src="{% static 'bootstrap-4.1.3-dist/js/bootstrap.min.js' %}"> </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+
+    <!-- Vue -->
+    <script src="{% static 'vue/vue.js' %}"></script>
+
+    <!-- Axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <!-- FontAwesome -->
+    <script src="{% static 'fontawesome-free-5.12.1-web/js/all.js' %}"></script>
+   <!--  <link href="{% static 'fontawesome-free-5.12.1-web/css/js.css' %}"></link> -->
+
+    <!-- Source Sans Pro Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Jaldi Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Jaldi:wght@700&display=swap" rel="stylesheet">
+
+    <!-- Chart Js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js"></script>
+
+    <!-- Cookies JS -->
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+
+    <!-- jQuery UI -->
+    <script src="{% static 'jquery-ui-1.12.1.custom/jquery-ui.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'jquery-ui-1.12.1.custom/jquery-ui.css' %}"></link>
+
+    <!-- Panzoom -->
+    <script src='https://unpkg.com/panzoom@8.7.3/dist/panzoom.min.js'></script>
+    
+
+</head>
+<body>
+
+{% block content %}
+
+{% endblock %}
+
+</body>
+</html>

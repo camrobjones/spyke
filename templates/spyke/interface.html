@@ -1,0 +1,350 @@
+{% extends 'spyke/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'spyke/interface.css' %}">
+
+<div id='app'>
+
+    <div id='outer-container'>
+
+        <!-- Header -->
+        <div id='header-container'>
+            <h1 id='title'>Spyke</h1>
+
+            <div id='control-container'>
+                <div class='control-button-container' @click='runSimulation'>
+                    <i id='run-control' class="fas fa-play-circle"></i>
+                    <b class='control-button-label'>Run</b>
+                </div>
+
+                <div class='control-button-container'>
+                    <i id='refresh-control' class="fas fa-sync-alt"></i>
+                    <b class='control-button-label'>Refresh</b>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main -->
+        <div id='main-container'>
+
+            <!-- Sidebar -->
+            <div id='sidebar-container'>
+
+                <h2 class='sidebar-header-main'>Configuration</h2>
+
+                <!-- Sidebar Tabs -->
+
+                <div id='sidebar-tabs-container'>
+                    <div class='sidebar-tab'
+                         @click='changeSettingsTab("simulation")'
+                         v-bind:class="{ active: settingsTab=='simulation' }">
+                        <h4 class='sidebar-tab-title'>
+                            Simulation
+                        </h4>
+                    </div>
+
+                    <div class='sidebar-tab'
+                         @click='changeSettingsTab("stimuli")'
+                         v-bind:class="{ active: settingsTab=='stimuli' }">
+                        <h4 class='sidebar-tab-title'>
+                            Stimuli
+                        </h4>
+                    </div>
+
+                    <div class='sidebar-tab'
+                         @click='changeSettingsTab("neuron")'
+                         v-bind:class="{ active: settingsTab=='neuron' }">
+                        <h4 class='sidebar-tab-title'>
+                            Neuron
+                        </h4>
+                    </div>
+                </div>
+
+                <!-- Sidebar Sections -->
+
+                <!-- Simulation Section -->
+                <div class='sidebar-section' v-if="settingsTab == 'simulation'">
+
+                    <div class='sidebar-header-container'>
+                        <h3 class='sidebar-header'>
+                            Simulation
+                        </h3>
+                    </div>
+
+                    <div class='sidebar-section-content'>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="time" class="col-form-label">Time (ms)</label>
+                            <input type="number" class="form-control" id="time" v-model="time">
+                            <small id="emailHelp" class="form-text text-muted">Time for simulation to run in ms</small>
+
+                        </div>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="potential">Membrane Potential (mV)</label>
+                            <input type="number" class="form-control" id="potential" v-model="potential">
+                            <small id="potentialHelp" class="form-text text-muted">Resting membrane potential in mV</small>
+                          </div>
+
+                          <div class='button-container'>
+                            <!-- <button class='btn btn-success' @click='runSimulation'>Run</button> -->
+                          </div>
+
+                    </div>
+                </div>
+
+                <!-- Stimulus Section -->
+                <div class='sidebar-section' v-if="settingsTab == 'stimuli'">
+
+                    <h3 class='sidebar-header'>Stimuli</h3>
+
+                    <div class='sidebar-section-content'>
+
+                        <div v-for='(index, stim) in stimuli' class='stimulus-container'>
+
+                            <div class='stimulus-header-container'>
+                                <h5 class='stimulus-header'>
+                                Stimulus [[index + 1]]
+                                </h5>
+                                <div @click="removeStimulus(index)">
+                                    <i class="fas fa-times-circle close-icon" ></i>
+                                </div>
+                            </div>
+
+                            <div class="form-group sidebar-input-group">
+                                <label for="delay">Delay (ms)</label>
+                                <input type="number" class="form-control" id="delay" v-model="stim.delay">
+                                <small id="delayHelp" class="form-text text-muted">Time before stimulus onset</small>
+                            </div>
+
+                            <div class="form-group sidebar-input-group">
+                                <label for="duration">Duration (ms)</label>
+                                <input type="number" class="form-control" id="duration" v-model="stim.dur">
+                                <small id="durationHelp" class="form-text text-muted">Duration of stimulus</small>
+                            </div>
+
+                            <div class="form-group sidebar-input-group">
+                                <label for="amp">Amp (nA)</label>
+                                <input type="number" class="form-control" id="amp" v-model="stim.amp" step="0.1">
+                                <small id="ampHelp" class="form-text text-muted">Amplitude of stimulus</small>
+                            </div>
+                        </div>
+
+                        <div class='new-stim-container'>
+
+                            <button class='new-stim btn btn-success' @click='addStimulus'>
+                                Add Stimulus
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Neuron Section -->
+                <div class='sidebar-section' v-if="settingsTab == 'neuron'">
+
+                    <h3 class='sidebar-header'>Neuron</h3>
+
+                    <div class='sidebar-section-content'>
+
+                        <div class='buffer'></div>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="Ra">Axial resistance</label>
+                            <input type="number" class="form-control" id="Ra" v-model="neuron.general.Ra">
+                            <small id="RaHelp" class="form-text text-muted">Axial resistance in Ohm * cm</small>
+                        </div>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="cm">Membrane capacitance</label>
+                            <input type="number" class="form-control" id="cm" v-model="neuron.general.cm">
+                            <small id="cmHelp" class="form-text text-muted">Membrane capacitance in micro Farads / cm^2</small>
+                        </div>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="syn-tau">Synapse Tau</label>
+                            <input type="number" class="form-control" id="syn-tau" v-model="neuron.synapse.tau">
+                            <small id="syn-tauHelp" class="form-text text-muted">Decay time constant (ms)</small>
+                        </div>
+
+                        <!-- Soma -->
+                        <h4 class='sidebar-section-heading'>Soma</h4>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="soma-length">Length</label>
+                            <input type="number" class="form-control" id="soma-length" v-model="neuron.soma.L">
+                            <small id="soma-lengthHelp" class="form-text text-muted">The length of the soma in microns</small>
+                        </div>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="soma-diam">Diameter</label>
+                            <input type="number" class="form-control" id="soma-diam" v-model="neuron.soma.diam">
+                            <small id="soma-diamHelp" class="form-text text-muted">The diameter of the soma in microns</small>
+                        </div>
+
+                        <!-- Hodgkin-Huxley -->
+                        <h5 class='sidebar-section-subheading'>Hodgkin-Huxley kinetics</h5>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="soma-gnabar">Sodium conductance</label>
+                            <input type="number" class="form-control" id="soma-gnabar" v-model="neuron.soma.gnabar" step="0.01">
+                            <small id="gnabarHelp" class="form-text text-muted">Sodium conductance in S/cm2 </small>
+                        </div>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="soma-gkbar">Potassium conductance</label>
+                            <input type="number" class="form-control" id="soma-gkbar" v-model="neuron.soma.gkbar" step="0.001">
+                            <small id="gkbarHelp" class="form-text text-muted">Potassium conductance in S/cm2 </small>
+                        </div>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="soma-gl">Leak conductance</label>
+                            <input type="number" class="form-control" id="soma-gl" v-model="neuron.soma.gl" step="0.0001">
+                            <small id="soma-glHelp" class="form-text text-muted">Leak conductance in S/cm2 </small>
+                        </div>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="soma-el">Reversal potential</label>
+                            <input type="number" class="form-control" id="soma-el" v-model="neuron.soma.el">
+                            <small id="soma-elHelp" class="form-text text-muted">Reversal potential in mV   </small>
+                        </div>
+
+                        <!-- Dendrite -->
+                        <h4 class='sidebar-section-heading'>Dendrite</h4>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="dend-length">Length</label>
+                            <input type="number" class="form-control" id="dend-length" v-model="neuron.dend.L">
+                            <small id="dend-lengthHelp" class="form-text text-muted">The length of the dendrite in microns</small>
+                        </div>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="dend-diam">Diameter</label>
+                            <input type="number" class="form-control" id="dend-diam" v-model="neuron.dend.diam">
+                            <small id="dend-diamHelp" class="form-text text-muted">The diameter of the dendrite in microns</small>
+                        </div>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="dend-g">Passive conductance</label>
+                            <input type="number" class="form-control" id="dend-g" v-model="neuron.dend.g" step="0.001">
+                            <small id="dend-gHelp" class="form-text text-muted">Passive conductance in S/cm2 </small>
+                        </div>
+
+                        <div class="form-group sidebar-input-group">
+                            <label for="dend-e">Reversal potential</label>
+                            <input type="number" class="form-control" id="dend-e" v-model="neuron.dend.e">
+                            <small id="dend-eHelp" class="form-text text-muted">Reversal potential in mV   </small>
+                        </div>
+                    </div>
+
+                </div>
+
+
+            </div>
+
+            <!-- Content -->
+            <div id='content-container'>
+
+                <!-- Canvas -->
+                <div id='canvas-container'>
+
+                    <svg width=100% height=100% id='svg-canvas' onmousemove="updateCoords(event)">
+
+                        <defs>
+
+                            <radialGradient id="soma-gradient">
+                              <stop offset="5%" stop-color="#cccccc00"></stop>
+                              <stop offset="55%" stop-color="#cccccc55"></stop>
+                              <stop offset="85%" stop-color="#cccccccc"></stop>
+                              <stop offset="100%" stop-color="#cccccc"></stop>
+                            </radialGradient>
+
+                            <filter id="shadow2">
+                                  <feDropShadow dx="0" dy="0" stdDeviation="3" 
+                                      flood-color="#0000ff55"/>
+                                </filter>
+
+                        </defs>
+
+                        <g id='svg-canvas-inner'>
+
+                            <line x1="-5000" x2="5000" y1="0" y2="0" stroke='#cccccccc' stroke-width="1"></line>
+
+                            <line y1="-5000" y2="5000" x1="0" x2="0" stroke='#cccccccc' stroke-width="1"></line>
+
+                            <!-- <circle cx="100px" cy="100px" r="5px" id='point'></circle> -->
+
+                            <svg class='neuron-container' x="100px" y="100px">
+
+                                <circle class='soma' cx="100px" cy="100px" r="25px"/>
+
+                                  <path class='axon'
+                                  d="M 95 125 
+                                     q -30 20, 1 40 
+                                     t 1 40
+                                     h5
+                                     q 30 -20, 1 -40
+                                     t 1 -40
+                                     z" fill='#ccc'/>
+
+                                    <path class='dendrite'
+                                  d="M 105 75 
+                                     q 15 -10, -1 -20 
+                                     t -1 -20
+                                     h-1
+                                     q -15 10, -1 20
+                                     t -1 20
+                                     z" fill='#ccc'/>
+                            </svg>
+
+                        </g>
+
+                    </svg>
+
+                    <div id='canvas-coord-container'>
+                        <span id='canvas-coords'></span>
+                    </div>
+
+                </div>
+
+                <!-- Monitor -->
+
+                <div id='monitor-container'>
+
+                    <div id='monitor-nav'>
+
+                        <div id='monitor-nav-title-container'>
+                            <h2 id='monitor-title'>Monitor</h2>
+                        </div>
+
+                        <div class='monitor-tabs-container'>
+                            <div v-for='view in views' class='monitor-tab-container'>
+                                <div class='monitor-tab' v-bind:class="{ active: monitorTab == view}" @click="changeMonitorTab(view)">
+                                    <h4 class='monitor-tab-title'>[[view]]</h4>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <canvas id="monitor-canvas" width="100%" height="300px"></canvas>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </div>
+  
+</div>  
+
+<script src="{% static 'spyke/interface.js' %}"> </script>
+
+{% endblock %}
