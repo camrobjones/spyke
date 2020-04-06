@@ -3,6 +3,8 @@
 
 {% block content %}
 
+{% csrf_token %}
+
 <link rel="stylesheet" href="{% static 'spyke/interface.css' %}">
 
 <div id='app'>
@@ -134,7 +136,7 @@
 
                         <div class='new-stim-container'>
 
-                            <button class='new-stim btn btn-success' @click='addStimulus'>
+                            <button class='new-stim btn' @click='addStimulus'>
                                 Add Stimulus
                             </button>
 

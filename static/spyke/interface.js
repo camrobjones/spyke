@@ -112,6 +112,9 @@ var app = new Vue({
             let yData = this.recording[0][view]
             var yLabel = "Soma Voltage (mV)";
 
+            var primaryColor = getComputedStyle(document.documentElement)
+                                .getPropertyValue('--primary');
+
             this.monitor = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -120,7 +123,8 @@ var app = new Vue({
                         label: yLabel,
                         data: yData,
                         fill: false,
-                        borderColor:"rgb(75, 192, 192)",
+                        // borderColor:"rgb(75, 192, 192)",
+                        borderColor:primaryColor,
                         lineTension:0.1
                     }],
                     options: {
