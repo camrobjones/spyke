@@ -62,6 +62,14 @@
                             Neuron
                         </h4>
                     </div>
+
+                    <div class='sidebar-tab'
+                         @click='changeSettingsTab("connections")'
+                         v-bind:class="{ active: settingsTab=='connections' }">
+                        <h4 class='sidebar-tab-title'>
+                            Conn
+                        </h4>
+                    </div>
                 </div>
 
                 <!-- Sidebar Sections -->
@@ -77,18 +85,18 @@
 
                     <div class='sidebar-section-content'>
 
-                        <div class="form-group sidebar-input-group">
-                            <label for="time" class="col-form-label">Time (ms)</label>
-                            <input type="number" class="form-control" id="time" v-model="time">
-                            <small id="emailHelp" class="form-text text-muted">Time for simulation to run in ms</small>
+                        <div class='buffer'></div>
 
+                        <div class="form-group row sidebar-input-group" v-for='opt in simulationOptions'>
+                            <div class='col-8'>
+                                <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
+                                <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
+                            </div>
+                            <div class='col-4'>
+                                <input type="number" class="form-control sidebar-input-number" v-bind:id="opt.attribute" v-model="simulation[opt.attribute]">
+                            </div>
                         </div>
 
-                        <div class="form-group sidebar-input-group">
-                            <label for="potential">Membrane Potential (mV)</label>
-                            <input type="number" class="form-control" id="potential" v-model="potential">
-                            <small id="potentialHelp" class="form-text text-muted">Resting membrane potential in mV</small>
-                          </div>
 
                           <div class='button-container'>
                             <!-- <button class='btn btn-success' @click='runSimulation'>Run</button> -->
@@ -104,40 +112,79 @@
 
                     <div class='sidebar-section-content'>
 
-                        <div v-for='(index, stim) in stimuli' class='stimulus-container'>
+                        <div v-for='(stim, index) in stimuli' class='config-item-container'>
 
-                            <div class='stimulus-header-container'>
-                                <h5 class='stimulus-header'>
+                            <div class='config-item-header-container' onclick="toggleHideNext(this);">
+                                <h5 class='config-item-header'>
                                 Stimulus [[index + 1]]
                                 </h5>
-                                <div @click="removeStimulus(index)">
+                                
+                                <div class='config-item-header-delete-container' @click="removeStimulus(index)">
                                     <i class="fas fa-times-circle close-icon" ></i>
+                                </div>
+
+                                <div class='config-item-header-options-container'>
+                                    <i class="fas fa-ellipsis-v"></i>
                                 </div>
                             </div>
 
-                            <div class="form-group sidebar-input-group">
-                                <label for="delay">Delay (ms)</label>
-                                <input type="number" class="form-control" id="delay" v-model="stim.delay">
-                                <small id="delayHelp" class="form-text text-muted">Time before stimulus onset</small>
-                            </div>
+                            <div class='config-item-body-container collapse'>
 
-                            <div class="form-group sidebar-input-group">
-                                <label for="duration">Duration (ms)</label>
-                                <input type="number" class="form-control" id="duration" v-model="stim.dur">
-                                <small id="durationHelp" class="form-text text-muted">Duration of stimulus</small>
-                            </div>
+                                <div class="form-group row sidebar-input-group">
+                                    <div class='col-6'>
+                                        <label class='row sidebar-input-label' for="stim-neuron">Neuron</label>
+                                        <small id="stim-neuron-help" class="form-text text-muted sidebar-input-help row">Neuron to attach stim to</small>
+                                    </div>
+                                    <div class='col-6'>
+                                        <select class="form-control" id="stim-neuron" v-model="stim.neuron">
+                                            <option v-for='neuron in neurons' v-bind:value='neuron.gid'>
+                                                Neuron [[neuron.gid]]
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
 
-                            <div class="form-group sidebar-input-group">
-                                <label for="amp">Amp (nA)</label>
-                                <input type="number" class="form-control" id="amp" v-model="stim.amp" step="0.1">
-                                <small id="ampHelp" class="form-text text-muted">Amplitude of stimulus</small>
+                                <div class="form-group row sidebar-input-group">
+                                    <div class='col-6'>
+                                        <label class='row sidebar-input-label' for="stim-sec">Section</label>
+                                        <small id="stim-sec-help" class="form-text text-muted sidebar-input-help row">Section to attach stim to</small>
+                                    </div>
+                                    <div class='col-6'>
+                                        <select class="form-control" id="stim-sec" v-model="stim.section">
+                                            <option v-for='sec in getSections(stim.neuron)' v-bind:value='sec'>
+                                                [[sec]]
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row sidebar-input-group">
+                                    <div class='col-8'>
+                                        <label for="stim-loc" class='row sidebar-input-label'>Location</label>
+                                        <small id="stim-locHelp" class="form-text text-muted sidebar-input-help row">Location of stimulus on segment</small>
+                                    </div>
+                                    <div class='col-4'>
+                                        <input type="number" class="form-control sidebar-input-number" id="stim-loc" v-model="stim.loc" min="0" max="1" step="0.1">
+                                    </div>
+                                </div>
+
+                                <div class="form-group row sidebar-input-group" v-for='opt in stimulusOptions'>
+                                    <div class='col-8'>
+                                        <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
+                                        <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
+                                    </div>
+                                    <div class='col-4'>
+                                        <input type="number" class="form-control sidebar-input-number" v-bind:id="opt.attribute" v-model="stim[opt.attribute]" v-bind:step="opt.step">
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
 
-                        <div class='new-stim-container'>
+                        <div class='new-config-item-container'>
 
-                            <button class='new-stim btn' @click='addStimulus'>
-                                Add Stimulus
+                            <button class='new-config-item btn' @click='addStimulus'>
+                                +
                             </button>
 
                         </div>
@@ -149,104 +196,320 @@
                 <!-- Neuron Section -->
                 <div class='sidebar-section' v-if="settingsTab == 'neuron'">
 
-                    <h3 class='sidebar-header'>Neuron</h3>
+                    <h3 class='sidebar-header'>Neurons</h3>
 
                     <div class='sidebar-section-content'>
 
-                        <div class='buffer'></div>
+                        <div class='config-item-container' v-for='(neuron, index) in neurons'>
 
-                        <div class="form-group sidebar-input-group">
-                            <label for="Ra">Axial resistance</label>
-                            <input type="number" class="form-control" id="Ra" v-model="neuron.general.Ra">
-                            <small id="RaHelp" class="form-text text-muted">Axial resistance in Ohm * cm</small>
+                            <div class='config-item-header-container' onclick="toggleHideNext(this);">
+                                <h5 class='config-item-header'>
+                                Neuron [[neuron.gid]]
+                                </h5>
+                                
+                                <div class='config-item-header-delete-container' @click="removeNeuron(index)">
+                                    <i class="fas fa-times-circle close-icon" ></i>
+                                </div>
+
+                                <div class='config-item-header-options-container'>
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </div>
+                            </div>
+
+                            <div class='config-item-body-container collapse'>
+
+                                <!-- General -->
+                                <div class='sidebar-section-heading-container' onclick="toggleHideNext(this);">
+                                    <h4 class='sidebar-section-heading'>General</h4>
+                                </div>
+
+                                <div class='sidebar-section-body-container collapse'>
+
+                                    <div class="form-group row sidebar-input-group">
+                                        <div class='col-8'>
+                                            <label for="Ra" class='row sidebar-input-label'>Axial resistance</label>
+                                            <small id="RaHelp" class="form-text text-muted sidebar-input-help row">Ohm * cm</small>
+                                        </div>
+                                        <div class='col-4'>
+                                            <input type="number" class="form-control sidebar-input-number" id="Ra" v-model="neuron.general.Ra">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group sidebar-input-group row">
+                                        <div class='col-8'>
+                                            <label class='row sidebar-input-label' for="cm">Membrane capacitance</label>
+                                            <small id="cmHelp" class="form-text text-muted sidebar-input-help row">Micro Farads / cm<sup>2</sup></small>
+                                        </div>
+                                        <div class='col-4'>
+                                            <input type="number" class="form-control sidebar-input-number" id="cm" v-model="neuron.general.cm">
+                                        </div>
+                                    </div>
+
+                                    <!-- <div class="form-group sidebar-input-group row">
+                                        <div class='col-8'>
+                                            <label class='row sidebar-input-label' for="syn-tau">Synapse Tau</label>
+                                            <small id="syn-tauHelp" class="form-text text-muted sidebar-input-help row">Decay time constant (ms)</small>
+                                        </div>
+                                        <div class='col-4'>
+                                            <input type="number" class="form-control sidebar-input-number" id="syn-tau" v-model="neuron.synapse.tau">
+                                        </div>
+                                    </div> -->
+                                </div>
+
+                                <!-- Soma -->
+                                <div class='sidebar-section-heading-container' onclick="toggleHideNext(this);">
+                                    <h4 class='sidebar-section-heading'>Soma</h4>
+                                </div>
+
+                                <div class='sidebar-section-body-container collapse'>
+
+                                    <div class="form-group sidebar-input-group row">
+                                        <div class='col-8'>
+                                            <label class='row sidebar-input-label' for="soma-length">Length</label>
+                                            <small id="soma-lengthHelp" class="form-text text-muted sidebar-input-help row">Microns</small>
+                                        </div>
+                                        <div class='col-4'>
+                                            <input type="number" class="form-control sidebar-input-number" id="soma-length" v-model="neuron.soma.L">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group sidebar-input-group row">
+                                        <div class='col-8'>
+                                            <label class='row sidebar-input-label' for="soma-diam">Diameter</label>
+                                            <small id="soma-diamHelp" class="form-text text-muted sidebar-input-help row">Microns</small>
+                                        </div>
+                                        <div class='col-4'>
+                                            <input type="number" class="form-control sidebar-input-number" id="soma-diam" v-model="neuron.soma.diam">
+                                        </div>
+                                    </div>
+
+                                    <!-- Hodgkin-Huxley -->
+                                    <h5 class='sidebar-section-subheading'>Hodgkin-Huxley kinetics</h5>
+
+                                    <div class="form-group sidebar-input-group row">
+                                        <div class='col-7'>
+                                            <label class='row sidebar-input-label' for="soma-gnabar">Sodium conductance</label>
+                                            <small id="gnabarHelp" class="form-text text-muted sidebar-input-help row">S/cm<sup>2</sup> </small>
+                                        </div>
+                                        <div class='col-5'>
+                                            <input type="number" class="form-control sidebar-input-number" id="soma-gnabar" v-model="neuron.soma.gnabar" step="0.01">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group sidebar-input-group row">
+                                        <div class='col-7'>
+                                            <label class='row sidebar-input-label' for="soma-gkbar">Potassium conductance</label>
+                                            <small id="gkbarHelp" class="form-text text-muted sidebar-input-help row">S/cm<sup>2</sup> </small>
+                                        </div>
+                                        <div class='col-5'>
+                                            <input type="number" class="form-control sidebar-input-number" id="soma-gkbar" v-model="neuron.soma.gkbar" step="0.001">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group sidebar-input-group row">
+                                        <div class='col-7'>
+                                            <label class='row sidebar-input-label' for="soma-gl">Leak conductance</label>
+                                            <small id="soma-glHelp" class="form-text text-muted sidebar-input-help row">S/cm<sup>2</sup> </small>
+                                        </div>
+                                        <div class='col-5'>
+                                            <input type="number" class="form-control sidebar-input-number" id="soma-gl" v-model="neuron.soma.gl" step="0.0001">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group sidebar-input-group row">
+                                        <div class='col-7'>
+                                            <label class='row sidebar-input-label' for="soma-el">Reversal potential</label>
+                                            <small id="soma-elHelp" class="form-text text-muted sidebar-input-help row">mV   </small>
+                                        </div>
+                                        <div class='col-5'>
+                                            <input type="number" class="form-control sidebar-input-number" id="soma-el" v-model="neuron.soma.el">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Axon -->
+                                <div class='sidebar-section-heading-container' onclick="toggleHideNext(this);">
+                                    <h4 class='sidebar-section-heading'>Axon</h4>
+                                </div>
+
+                                <div class='sidebar-section-body-container collapse'>
+
+                                    <div class="form-group row sidebar-input-group" v-for='opt in sectionOptions'>
+                                    <div class='col-7'>
+                                        <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
+                                        <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
+                                    </div>
+                                    <div class='col-5'>
+                                        <input type="number" class="form-control sidebar-input-number" v-bind:step="opt.step" v-bind:id="opt.attribute" v-model="neuron.axon[opt.attribute]">
+                                    </div>
+                                </div>
+
+                                </div>
+
+                                <!-- Dendrite -->
+                                <div class='sidebar-section-heading-container' onclick="toggleHideNext(this);">
+                                    <h4 class='sidebar-section-heading'>Dendrites</h4>
+                                </div>
+
+                                <div class='sidebar-section-body-container collapse'>
+
+                                    <div v-for='(dend, dendriteIndex) in neuron.dendrites'>
+
+                                        <div class='sidebar-section-subheading-container'>
+
+                                            <h5 class='sidebar-section-subheading'>Dendrite [[dendriteIndex + 1]]</h5>
+
+                                            <div class='sidebar-section-subheading-icon-container' @click="removeDendrite(neuron.gid, dendriteIndex)">
+                                                <i class="fas fa-times-circle close-icon" ></i>
+                                            </div>
+
+                                            <div class='sidebar-section-subheading-icon-container'>
+                                                <!-- <i class="fas fa-chevron-down"></i> -->
+                                            </div>
+
+                                        </div>
+
+                                        <div class="form-group row sidebar-input-group" v-for='opt in sectionOptions'>
+                                            <div class='col-7'>
+                                                <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
+                                                <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
+                                            </div>
+                                            <div class='col-5'>
+                                                <input type="number" class="form-control sidebar-input-number" v-bind:step="opt.step" v-bind:id="opt.attribute" v-model="dend[opt.attribute]">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class='sidebar-section-body-footer'>
+                                        <a id='addSection' @click='addDendrite(index)'>Add Dendrite</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Neuron Body container -->
+
                         </div>
 
-                        <div class="form-group sidebar-input-group">
-                            <label for="cm">Membrane capacitance</label>
-                            <input type="number" class="form-control" id="cm" v-model="neuron.general.cm">
-                            <small id="cmHelp" class="form-text text-muted">Membrane capacitance in micro Farads / cm^2</small>
+                        <div class='new-config-item-container'>
+
+                            <button class='new-config-item btn' @click='addNeuron'>
+                                +
+                            </button>
+
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Connection Section -->
+                <div class='sidebar-section' v-if="settingsTab == 'connections'">
+
+                    <h3 class='sidebar-header'>Connections</h3>
+
+                    <div class='sidebar-section-content'>
+
+                        <div v-for='(connection, index) in connections' class='config-item-container'>
+
+                            <div class='config-item-header-container' onclick="toggleHideNext(this);">
+                                <h5 class='config-item-header'>
+                                Connection [[index + 1]]
+                                </h5>
+                                
+                                <div class='config-item-header-delete-container' @click="removeConnection(index)">
+                                    <i class="fas fa-times-circle close-icon" ></i>
+                                </div>
+
+                                <div class='config-item-header-options-container'>
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </div>
+                            </div>
+
+                            <div class='config-item-body-container collapse'>
+
+                                <div class="form-group sidebar-input-group row">
+                                    <div class='col-4'>
+                                        <label class='row sidebar-input-label' for="connection-source">Source</label>
+                                        <small id="connection-source-help" class="form-text text-muted sidebar-input-help row">Source neuron</small>
+                                    </div>
+                                    <div class='col-8'>
+                                        <select class="form-control" id="connection-source" v-model="connection.source" @change='drawConnections'>
+                                            <option v-for='neuron in neurons' v-bind:value='neuron.gid'>
+                                                Neuron [[neuron.gid]]
+                                            </option>
+                                        </select>
+                                    </div>
+                                    
+                                </div>
+
+                                <!-- `Section -->
+                                <div class="form-group sidebar-input-group row">
+                                    <div class='col-4'>
+                                        <label class='row sidebar-input-label' for="connection-target">Target</label>
+                                        <small id="connection-target-help" class="form-text text-muted sidebar-input-help row">Target neuron</small>
+                                    </div>
+                                    <div class='col-8'>
+                                        <select class="form-control" id="connection-target" v-model="connection.target" @change='drawConnections'>
+                                            <option v-for='neuron in neurons' v-bind:value='neuron.gid'>
+                                                Neuron [[neuron.gid]]
+                                            </option>
+                                        </select>
+                                    </div>
+                                        
+                                </div>
+
+                                <!-- Location -->
+                                <div class="form-group row sidebar-input-group">
+                                    <div class='col-6'>
+                                        <label class='row sidebar-input-label' for="con-sec">Section</label>
+                                        <small id="con-sec-help" class="form-text text-muted sidebar-input-help row">Section to synapse on</small>
+                                    </div>
+                                    <div class='col-6'>
+                                        <select class="form-control" id="con-sec" v-model="connection.section">
+                                            <option v-for='sec in getSections(connection.target)' v-bind:value='sec'>
+                                                [[sec]]
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row sidebar-input-group">
+                                    <div class='col-8'>
+                                        <label for="con-loc" class='row sidebar-input-label'>Location</label>
+                                        <small id="con-locHelp" class="form-text text-muted sidebar-input-help row">Location of synapse on section</small>
+                                    </div>
+                                    <div class='col-4'>
+                                        <input type="number" class="form-control sidebar-input-number" id="con-loc" v-model="connection.loc" min="0" max="1" step="0.1">
+                                    </div>
+                                </div>
+
+                                <div class="form-group row sidebar-input-group" v-for='opt in connectionOptions'>
+                                    <div class='col-7'>
+                                        <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
+                                        <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
+                                    </div>
+                                    <div class='col-5'>
+                                        <input type="number" class="form-control sidebar-input-number" v-bind:id="opt.attribute" v-model="connection[opt.attribute]">
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                        
+
+                        <div class='new-config-item-container'>
+
+                            <button class='new-config-item btn' @click='addConnection'>
+                                +
+                            </button>
+
                         </div>
 
-                        <div class="form-group sidebar-input-group">
-                            <label for="syn-tau">Synapse Tau</label>
-                            <input type="number" class="form-control" id="syn-tau" v-model="neuron.synapse.tau">
-                            <small id="syn-tauHelp" class="form-text text-muted">Decay time constant (ms)</small>
-                        </div>
-
-                        <!-- Soma -->
-                        <h4 class='sidebar-section-heading'>Soma</h4>
-
-                        <div class="form-group sidebar-input-group">
-                            <label for="soma-length">Length</label>
-                            <input type="number" class="form-control" id="soma-length" v-model="neuron.soma.L">
-                            <small id="soma-lengthHelp" class="form-text text-muted">The length of the soma in microns</small>
-                        </div>
-
-                        <div class="form-group sidebar-input-group">
-                            <label for="soma-diam">Diameter</label>
-                            <input type="number" class="form-control" id="soma-diam" v-model="neuron.soma.diam">
-                            <small id="soma-diamHelp" class="form-text text-muted">The diameter of the soma in microns</small>
-                        </div>
-
-                        <!-- Hodgkin-Huxley -->
-                        <h5 class='sidebar-section-subheading'>Hodgkin-Huxley kinetics</h5>
-
-                        <div class="form-group sidebar-input-group">
-                            <label for="soma-gnabar">Sodium conductance</label>
-                            <input type="number" class="form-control" id="soma-gnabar" v-model="neuron.soma.gnabar" step="0.01">
-                            <small id="gnabarHelp" class="form-text text-muted">Sodium conductance in S/cm2 </small>
-                        </div>
-
-                        <div class="form-group sidebar-input-group">
-                            <label for="soma-gkbar">Potassium conductance</label>
-                            <input type="number" class="form-control" id="soma-gkbar" v-model="neuron.soma.gkbar" step="0.001">
-                            <small id="gkbarHelp" class="form-text text-muted">Potassium conductance in S/cm2 </small>
-                        </div>
-
-                        <div class="form-group sidebar-input-group">
-                            <label for="soma-gl">Leak conductance</label>
-                            <input type="number" class="form-control" id="soma-gl" v-model="neuron.soma.gl" step="0.0001">
-                            <small id="soma-glHelp" class="form-text text-muted">Leak conductance in S/cm2 </small>
-                        </div>
-
-                        <div class="form-group sidebar-input-group">
-                            <label for="soma-el">Reversal potential</label>
-                            <input type="number" class="form-control" id="soma-el" v-model="neuron.soma.el">
-                            <small id="soma-elHelp" class="form-text text-muted">Reversal potential in mV   </small>
-                        </div>
-
-                        <!-- Dendrite -->
-                        <h4 class='sidebar-section-heading'>Dendrite</h4>
-
-                        <div class="form-group sidebar-input-group">
-                            <label for="dend-length">Length</label>
-                            <input type="number" class="form-control" id="dend-length" v-model="neuron.dend.L">
-                            <small id="dend-lengthHelp" class="form-text text-muted">The length of the dendrite in microns</small>
-                        </div>
-
-                        <div class="form-group sidebar-input-group">
-                            <label for="dend-diam">Diameter</label>
-                            <input type="number" class="form-control" id="dend-diam" v-model="neuron.dend.diam">
-                            <small id="dend-diamHelp" class="form-text text-muted">The diameter of the dendrite in microns</small>
-                        </div>
-
-                        <div class="form-group sidebar-input-group">
-                            <label for="dend-g">Passive conductance</label>
-                            <input type="number" class="form-control" id="dend-g" v-model="neuron.dend.g" step="0.001">
-                            <small id="dend-gHelp" class="form-text text-muted">Passive conductance in S/cm2 </small>
-                        </div>
-
-                        <div class="form-group sidebar-input-group">
-                            <label for="dend-e">Reversal potential</label>
-                            <input type="number" class="form-control" id="dend-e" v-model="neuron.dend.e">
-                            <small id="dend-eHelp" class="form-text text-muted">Reversal potential in mV   </small>
-                        </div>
                     </div>
 
                 </div>
 
 
             </div>
+            <!-- End Sidebar -->
 
             <!-- Content -->
             <div id='content-container'>
@@ -274,13 +537,15 @@
 
                         <g id='svg-canvas-inner'>
 
+                            <circle id='point-circle' cx="0px" cy="0px" r="5px"></circle>
+
                             <line x1="-5000" x2="5000" y1="0" y2="0" stroke='#cccccccc' stroke-width="1"></line>
 
                             <line y1="-5000" y2="5000" x1="0" x2="0" stroke='#cccccccc' stroke-width="1"></line>
 
                             <!-- <circle cx="100px" cy="100px" r="5px" id='point'></circle> -->
 
-                            <svg class='neuron-container' x="100px" y="100px">
+                            <!-- <svg class='neuron-container' x="100px" y="100px">
 
                                 <circle class='soma' cx="100px" cy="100px" r="25px"/>
 
@@ -302,7 +567,7 @@
                                      t -1 20
                                      z" fill='#ccc'/>
                             </svg>
-
+ -->
                         </g>
 
                     </svg>
@@ -346,6 +611,9 @@
     </div>
   
 </div>  
+
+<template id="neuron-template">
+</template>
 
 <script src="{% static 'spyke/interface.js' %}"> </script>
 

@@ -1,16 +1,19 @@
 
 :root {
   --top-menu-height: 70px; 
-  /*--primary: #7200c3;*/
-  --primary: #36005d;
+  --primary: #7200c3;
+  --primary-dark: #36005d;
+  --primary-20: #7200c336;
+  --primary-40: #7200c372;
   --secondary: #ff8500;
   --dark: #333333;
+  /*--dark: #2C3531;*/
   /*--dark: #36005d;*/
   --darkish: #555555;
-  /*--darker: #222222;*/
-  --darker: #24003e;
-  /*--darkest: #111111;*/
-  --darkest: #130021;
+  --darker: #222222;
+  /*--darker: #24003e;*/
+  --darkest: #111111;
+  /*--darkest: #130021;*/
   --light: #e2e2e2;
 
 }
@@ -27,6 +30,10 @@ html {
 body {
     height:100%;
     width:100%;
+}
+
+.hide {
+    display: none;
 }
 
 /* Layout */
@@ -183,7 +190,9 @@ body {
 }
 
 .sidebar-tab:hover {
-    background: #eeeeee;
+    background: var(--primary-20);
+    box-shadow: 1px -1px 1px 0px var(--primary-20);
+    border-color: 1px -1px 1px 0px var(--primary-20);
 }
 
 .sidebar-tab.active {
@@ -204,6 +213,7 @@ body {
     padding-left: 10px;
     padding-top: 5px;
     padding-bottom: .5rem;
+    margin-bottom: 0px;
     font-size: 1.8rem;
     font-weight: 600;
     color: var(--dark);
@@ -228,20 +238,41 @@ body {
     flex-direction: column;
 }
 
+.sidebar-section-heading-container {
+    padding: 10px 10px;
+    background: var(--primary-20);
+    margin-bottom: 10px;
+    cursor: pointer;
+    margin-right: 10px;
+    border-radius: 0px 20px 20px 0px;
+}
+
+.sidebar-section-heading-container:hover {
+    background: var(--primary-40);
+}
+
+.sidebar-section-heading-container.show {
+    background: var(--primary-40);
+}
+
 .sidebar-section-heading {
-    font-size: 1.4rem;
+    font-size: 1.1rem;
     color: var(--darker);
-    /*color: var(--primary);*/
-    font-weight: 600;
-    padding: 0px 10px 0px 10px;
+    font-weight: 500;
+    margin-bottom:0px;
+}
+
+.sidebar-section-subheading-container {
+    display: flex;
+    padding-right: 20px;
+    margin: 6px 0px;
 }
 
 .sidebar-section-subheading {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--darker);
-    /*color: var(--primary);*/
+    font-size: 0.9rem;
+    color: var(--darkish);
     padding: 0px 10px 0px 10px;
+    flex: 1 1 auto;
 }
 
 .sidebar-section-content {
@@ -249,57 +280,136 @@ body {
 }
 
 .sidebar-input-group {
-    padding: 0px 13px;
+    margin-left: 15px;
+    margin-right: 5px;
 }
 
-/* Stimulus */
+.sidebar-input-label {
+    margin-bottom:0;
+}
 
+.sidebar-input-help {
+    margin-top:0;
+}
 
-.stimulus-container {
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 5px 5px;
-    margin-bottom: 15px;
-    margin: 7.5px 10px 7.5px 10px;
+.sidebar-input-number.wide {
+    float:right;
+    width:10ch;
+}
+
+.neuron-header {
+    background: var(--primary-20);
+    padding: 5px;
+    margin-right: 20px;
+    border-radius: 0px 25px 25px 0px;
+    cursor:pointer;
+    margin-bottom: 10px;
+}
+
+.neuron-header:hover {
+    background: var(--primary-40);
 }
 
 
-.stimulus-header-container {
+/* Config Item */
+
+.config-item-body-container {
+    padding-top:8px;
+    border-left: 2px solid var(--primary-20);
+}
+
+.config-item-container {
+    border-bottom: 0.5px solid #cccccca3;
+}
+
+
+.config-item-header-container {
     display: flex;
     justify-content: space-between;
+    
+    padding: 7px 5px;
+    cursor:pointer;
 }
 
-.stimulus-header {
+.config-item-header-container:hover {
+    background-color: var(--light);
+}
+
+.config-item-header-container.show {
+    box-shadow: 0px 1px 2px 0px #00000022;
+    padding: 5px 5px;
+}
+
+.config-item-header {
     font-weight: 600;
     padding: 5px 10px 0px 10px;
     margin-bottom: 0.25em;
     font-size: 1.2rem;
     color: var(--darker);
+    flex: 1 0 auto;
+}
+
+.config-item-header-options-container {
+    margin: auto 10px;
+    color: var(--dark);
+}
+
+.config-item-header-delete-container {
+    margin: auto 10px;
+    color: var(--dark);
+    display: none;
+}
+
+.show .config-item-header-delete-container {
+    display:block;
 }
 
 .close-icon {
     color: #dc3545;
     cursor:pointer;
-    margin:5px;
 }
 
 .close-icon:hover {
     color: #f51026;
 }
 
-.new-stim-container {
+.new-config-item-container {
     float: right;
     margin-right: 10px;
 }
 
-.new-stim {
-    background: var(--primary);
-    opacity:0.9;
-    color:white;
+.new-config-item {
+    background: var(--darkest);
+    opacity: 0.9;
+    color: white;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 35px;
+    text-align: center;
+    vertical-align: middle;
+    padding: 0px;
+    line-height: 1em;
+    margin-top:10px;
+    margin-bottom:20px;
+    box-shadow: 1px 1px 2px 1px #00000054;
 }
 
-.new-stim:hover {
+.new-config-item:focus {
+    box-shadow: 1px 1px 2px 1px #00000054;
+}
+
+.new-config-item:hover {
     opacity:1;
+}
+
+.sidebar-section-body-footer {
+    padding: 0px 10px 10px 10px;
+}
+
+#addSection {
+    color: var(--primary);
+    cursor:pointer;
 }
 
 /* Neuron sidebar */
@@ -324,8 +434,8 @@ body {
 /* Neurons */
 
 .soma {
-    fill:url("#soma-gradient");
     cursor:pointer;
+    fill: url('#soma-gradient')
 }
 
 .axon {
@@ -346,6 +456,10 @@ body {
 
 .dendrite:hover {
     filter:url("#shadow2");
+}
+
+.axon-terminal {
+    cursor:pointer;
 }
 
 /* Monitor */

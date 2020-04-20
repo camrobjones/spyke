@@ -5,8 +5,6 @@
 <head>
     <title>Spyke — Interactive Neuron Model</title>
 
-    <head>
-
     <meta charset="utf-8">
 
     <!-- Bootstrap -->
@@ -26,14 +24,13 @@
     <script src="{% static 'fontawesome-free-5.12.1-web/js/all.js' %}"></script>
    <!--  <link href="{% static 'fontawesome-free-5.12.1-web/css/js.css' %}"></link> -->
 
-    <!-- Source Sans Pro Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="{% static 'fonts/fonts.css' %}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@900&display=swap" rel="stylesheet">
 
-    <!-- Jaldi Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Jaldi:wght@700&display=swap" rel="stylesheet">
 
     <!-- Chart Js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js"></script>
+    <script src="{% static 'chartjs/chart.js' %}"></script>
 
     <!-- Cookies JS -->
     <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
@@ -43,7 +40,14 @@
     <link rel="stylesheet" href="{% static 'jquery-ui-1.12.1.custom/jquery-ui.css' %}"></link>
 
     <!-- Panzoom -->
-    <script src='https://unpkg.com/panzoom@8.7.3/dist/panzoom.min.js'></script>
+    <script src="{% static 'panzoom/panzoom.min.js' %}"></script>
+    
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon_io/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon_io/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon_io/favicon-16x16.png' %}">
+    <link rel="manifest" href="{% static 'favicon_io/site.webmanifest' %}">
+    <link rel="android-chrome" sizes="192x192" href="{% static 'favicon_io/android-chrome-192x192.png' %}">
     
 
 </head>

@@ -4,7 +4,9 @@ Spyke is an interactive web tool for modelling neurons, recording and plotting r
 
 The package is written to be run as a django web app and is written in Python and Javascript.
 
-The python makes use of the Yale NEURON project as a backend
+The python makes use of the Yale NEURON project as a backend.
+
+The site is hosted [here](https://camrobjones.com/spyke).
 
 Features
 --------
@@ -15,6 +17,19 @@ Features
 - Run simulations asynchronously in the browser.
 - Plot voltage, current, and action potentials.
 - Drag and drop neurons on a scalable, pannable 2d map.
+
+Update: 20th Apr 2020
+
+- Create multiple neurons
+- Edit axon parameters
+- Add multiple dendrites
+- Attach stimulus to specific section and location of neuron
+- Connect neurons to each other
+    - Specify section and location of synapse on target neuron
+- Plot multiple neurons in different colors
+- More compact design of config options
+
+
 
 
 Roadmap
