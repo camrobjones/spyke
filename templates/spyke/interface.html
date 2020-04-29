@@ -16,13 +16,32 @@
             <h1 id='title'>Spyke</h1>
 
             <div id='control-container'>
+
+                <!-- Save -->
+                <div class='control-button-container' @click='savePopup()'>
+                    <i id='save-control' class="control fas fa-save"></i>
+                    <b class='control-button-label'>Save</b>
+                </div>
+
+                <!-- Load -->
+                <div class='control-button-container' @click='loadPopup()'>
+                    <i id='load-control' class="control fas fa-folder-open"></i>
+                    <b class='control-button-label'>Load</b>
+                </div>
+
+
+                <!-- Run control -->
                 <div class='control-button-container' @click='runSimulation'>
-                    <i id='run-control' class="fas fa-play-circle"></i>
+                    <i id='run-control' class="control fas fa-play-circle"></i>
+                    <div v-show='status.runningSim' class="spinner-border text-primary" id='run-control-spinner' role="status">
+                      <span class="sr-only">Loading...</span>
+                    </div>
                     <b class='control-button-label'>Run</b>
                 </div>
 
+                <!-- Refresh -->
                 <div class='control-button-container'>
-                    <i id='refresh-control' class="fas fa-sync-alt"></i>
+                    <i id='refresh-control' class="control fas fa-sync-alt"></i>
                     <b class='control-button-label'>Refresh</b>
                 </div>
             </div>
@@ -283,48 +302,55 @@
                                         </div>
                                     </div>
 
-                                    <!-- Hodgkin-Huxley -->
-                                    <h5 class='sidebar-section-subheading'>Hodgkin-Huxley kinetics</h5>
+                                    <!-- Channels -->
+                                    <div class='sidebar-input-group-container' v-for='channel in neuron.soma.channels'>
 
-                                    <div class="form-group sidebar-input-group row">
-                                        <div class='col-7'>
-                                            <label class='row sidebar-input-label' for="soma-gnabar">Sodium conductance</label>
-                                            <small id="gnabarHelp" class="form-text text-muted sidebar-input-help row">S/cm<sup>2</sup> </small>
+                                        <div class='sidebar-input-group-boundary'>
                                         </div>
-                                        <div class='col-5'>
-                                            <input type="number" class="form-control sidebar-input-number" id="soma-gnabar" v-model="neuron.soma.gnabar" step="0.01">
+
+                                        <div class='sidebar-section-subheading-container'>
+
+                                            <h5 class='sidebar-section-subheading'> [[channel.title]]</h5>
+
+                                            <div class='sidebar-section-subheading-icon-container' @click="removeChannel(neuron, 'soma', channel.name)">
+                                                <i class="fas fa-times-circle close-icon" ></i>
+                                            </div>
+
+                                            <div class='sidebar-section-subheading-icon-container'>
+                                                <!-- <i class="fas fa-chevron-down"></i> -->
+                                            </div>
+
+                                        </div>
+
+                                        <div class="form-group row sidebar-input-group" v-for='param in channel.parameters'>
+                                            <div class='col-7'>
+                                                <label v-bind:for="param.name" class='row sidebar-input-label'>[[param.title]]</label>
+                                                <small v-bind:id="param.name + 'Help'" class="form-text text-muted sidebar-input-help row" v-html="param.help"></small>
+                                            </div>
+                                            <div class='col-5'>
+                                                <input type="number" class="form-control sidebar-input-number" v-bind:step="param.step" v-bind:id="param.name" v-model="param.value">
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="form-group sidebar-input-group row">
-                                        <div class='col-7'>
-                                            <label class='row sidebar-input-label' for="soma-gkbar">Potassium conductance</label>
-                                            <small id="gkbarHelp" class="form-text text-muted sidebar-input-help row">S/cm<sup>2</sup> </small>
+                                    <div class='sidebar-input-group-boundary'>
+                                    </div>
+
+                                    <div class="form-group row sidebar-input-group">
+                                        <div class='col-8'>
+                                            <select class="form-control" id="newChannel" v-model="neuron['soma'].data.selectedChannel">
+                                                <option v-for="channel in availableChannels(neuron.gid, 'soma')" v-bind:value='channel.name'>
+                                                    [[channel.title]]
+                                                </option>
+                                            </select>
                                         </div>
-                                        <div class='col-5'>
-                                            <input type="number" class="form-control sidebar-input-number" id="soma-gkbar" v-model="neuron.soma.gkbar" step="0.001">
+                                        <div class='col-4'>
+                                            <button class='addChannel btn' @click="addChannel(neuron, 'soma')">+
+                                            </button>
                                         </div>
                                     </div>
 
-                                    <div class="form-group sidebar-input-group row">
-                                        <div class='col-7'>
-                                            <label class='row sidebar-input-label' for="soma-gl">Leak conductance</label>
-                                            <small id="soma-glHelp" class="form-text text-muted sidebar-input-help row">S/cm<sup>2</sup> </small>
-                                        </div>
-                                        <div class='col-5'>
-                                            <input type="number" class="form-control sidebar-input-number" id="soma-gl" v-model="neuron.soma.gl" step="0.0001">
-                                        </div>
-                                    </div>
 
-                                    <div class="form-group sidebar-input-group row">
-                                        <div class='col-7'>
-                                            <label class='row sidebar-input-label' for="soma-el">Reversal potential</label>
-                                            <small id="soma-elHelp" class="form-text text-muted sidebar-input-help row">mV   </small>
-                                        </div>
-                                        <div class='col-5'>
-                                            <input type="number" class="form-control sidebar-input-number" id="soma-el" v-model="neuron.soma.el">
-                                        </div>
-                                    </div>
                                 </div>
 
                                 <!-- Axon -->
@@ -335,14 +361,60 @@
                                 <div class='sidebar-section-body-container collapse'>
 
                                     <div class="form-group row sidebar-input-group" v-for='opt in sectionOptions'>
-                                    <div class='col-7'>
-                                        <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
-                                        <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
+                                        <div class='col-7'>
+                                            <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
+                                            <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
+                                        </div>
+                                        <div class='col-5'>
+                                            <input type="number" class="form-control sidebar-input-number" v-bind:step="opt.step" v-bind:id="opt.attribute" v-model="neuron.axon[opt.attribute]">
+                                        </div>
                                     </div>
-                                    <div class='col-5'>
-                                        <input type="number" class="form-control sidebar-input-number" v-bind:step="opt.step" v-bind:id="opt.attribute" v-model="neuron.axon[opt.attribute]">
+
+                                    <!-- Channels -->
+                                    <div class='sidebar-input-group-container' v-for='channel in neuron.axon.channels'>
+
+                                        <div class='sidebar-input-group-boundary'>
+                                        </div>
+
+                                        <div class='sidebar-section-subheading-container'>
+
+                                            <h5 class='sidebar-section-subheading'> [[channel.title]]</h5>
+
+                                            <div class='sidebar-section-subheading-icon-container' @click="removeChannel(neuron, 'axon', channel.name)">
+                                                <i class="fas fa-times-circle close-icon" ></i>
+                                            </div>
+
+                                            <div class='sidebar-section-subheading-icon-container'>
+                                                <!-- <i class="fas fa-chevron-down"></i> -->
+                                            </div>
+
+                                        </div>
+
+                                        <div class="form-group row sidebar-input-group" v-for='param in channel.parameters'>
+                                            <div class='col-7'>
+                                                <label v-bind:for="param.name" class='row sidebar-input-label'>[[param.title]]</label>
+                                                <small v-bind:id="param.name + 'Help'" class="form-text text-muted sidebar-input-help row" v-html="param.help"></small>
+                                            </div>
+                                            <div class='col-5'>
+                                                <input type="number" class="form-control sidebar-input-number" v-bind:step="param.step" v-bind:id="param.name" v-model="param.value">
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+
+                                    <div class="form-group row sidebar-input-group">
+                                        <div class='col-8'>
+                                            <select class="form-control" id="newChannel" v-model="neuron['axon'].data.selectedChannel">
+                                                <option v-for="channel in availableChannels(neuron.gid, 'axon')" v-bind:value='channel.name'>
+                                                    [[channel.title]]
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class='col-4'>
+                                            <button class='addChannel btn' @click="addChannel(neuron, 'axon')">+
+                                            </button>
+                                        </div>
+                                    </div>
+
 
                                 </div>
 
@@ -378,6 +450,52 @@
                                                 <input type="number" class="form-control sidebar-input-number" v-bind:step="opt.step" v-bind:id="opt.attribute" v-model="dend[opt.attribute]">
                                             </div>
                                         </div>
+
+                                        <!-- Channels -->
+                                        <div class='sidebar-input-group-container' v-for='channel in dend.channels'>
+
+                                            <div class='sidebar-input-group-boundary'>
+                                            </div>
+
+                                            <div class='sidebar-section-subheading-container'>
+
+                                                <h5 class='sidebar-section-subheading'> [[channel.title]]</h5>
+
+                                                <div class='sidebar-section-subheading-icon-container' @click="removeChannel(neuron, 'dendrite-'+dend.gid, channel.name)">
+                                                    <i class="fas fa-times-circle close-icon" ></i>
+                                                </div>
+
+                                                <div class='sidebar-section-subheading-icon-container'>
+                                                    <!-- <i class="fas fa-chevron-down"></i> -->
+                                                </div>
+
+                                            </div>
+
+                                            <div class="form-group row sidebar-input-group" v-for='param in channel.parameters'>
+                                                <div class='col-7'>
+                                                    <label v-bind:for="param.name" class='row sidebar-input-label'>[[param.title]]</label>
+                                                    <small v-bind:id="param.name + 'Help'" class="form-text text-muted sidebar-input-help row" v-html="param.help"></small>
+                                                </div>
+                                                <div class='col-5'>
+                                                    <input type="number" class="form-control sidebar-input-number" v-bind:step="param.step" v-bind:id="param.name" v-model="param.value">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group row sidebar-input-group">
+                                            <div class='col-8'>
+                                                <select class="form-control" id="newChannel" v-model="dend.data.selectedChannel">
+                                                    <option v-for="channel in availableChannels(neuron.gid, 'dendrite-'+dend.gid)" v-bind:value='channel.name'>
+                                                        [[channel.title]]
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class='col-4'>
+                                                <button class='addChannel btn' @click="addChannel(neuron, 'dendrite-'+dend.gid)">+
+                                                </button>
+                                            </div>
+                                        </div>
+
                                     </div>
                                     
                                     <div class='sidebar-section-body-footer'>
@@ -543,6 +661,8 @@
 
                             <line y1="-5000" y2="5000" x1="0" x2="0" stroke='#cccccccc' stroke-width="1"></line>
 
+                            <svg v-for='neuron in neurons' v-bind:x='neuron.x' v-bind:y='neuron.y' v-html='svgData.innerHTML' width="150px" height="150px" v-bind:id="'neuron-' + neuron.gid" class='neuron-container' viewBox="0 0 26.458332 26.458334">
+
                             <!-- <circle cx="100px" cy="100px" r="5px" id='point'></circle> -->
 
                             <!-- <svg class='neuron-container' x="100px" y="100px">
@@ -606,7 +726,209 @@
             </div>
 
         </div>
+        <!-- End Main Container -->
 
+    </div>
+    <!-- End Outer Container -->
+
+    <div id='popup-container' class='hide'>
+
+        <!-- Save Popup -->
+        <div id='save-popup-container' class='popup-container' v-show='popups.save'>
+            
+            <div id='save-popup' class='popup'>
+
+                <!-- Header -->
+                <div id='save-popup-header-container' class='popup-header-container'>
+                    <h5 id='save-popup-header' class='popup-header'>Save Simulation
+                    </h5>
+                </div>
+
+                <!-- Body -->
+                <div id='save-popup-body-container' class='popup-body-container'>
+
+                    <div id='save-popup-body' class='popup-body'>
+
+                        <div class='form-row row popup-input-container'>
+
+                            <div class='col-4'>
+
+                                <label for='save-popup-filename'>Save as</label>
+                            </div>
+
+                            <div class='col-8'>
+
+                                <input type='text' id='save-popup-filename' class='popup-form-input form-control' v-model='save.filename'>
+
+                            </div>
+
+                        </div>
+                        
+                        <div class='popup-button-container'>
+
+                            <button type='button' class='btn popup-button cancel' @click='savePopup(false)'>Cancel</button>
+
+                            <button type='button' class='btn popup-button save' @click='saveSimulation'>Save</button>
+                            
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+        </div>
+        <!-- End Save Popup -->
+
+        <!-- Load Popup -->
+        <div id='load-popup-container' class='popup-container' v-show='popups.load'>
+            
+            <div id='load-popup' class='popup'>
+
+                <!-- Header -->
+                <div id='load-popup-header-container' class='popup-header-container'>
+                    <h5 id='load-popup-header' class='popup-header'>Load Simulation
+                    </h5>
+                </div>
+
+                <!-- Body -->
+                <div id='load-popup-body-container' class='popup-body-container'>
+
+                    <div id='load-popup-body' class='popup-body'>
+
+                        <div id='load-popup-selector'>
+
+                            <div v-for='file in savedFiles'>
+
+                                <div class='saved-file' :class="{ selected: load.selected == file.name}" @click='load.selected = file.name'>
+
+                                    <h6 class='saved-file-name'>
+                                        [[file.name]]
+                                    </h6>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                        
+                        <div class='popup-button-container'>
+
+                            <button type='button' class='btn popup-button cancel' @click='loadPopup(false)'>Cancel</button>
+
+                            <button type='button' class='btn popup-button save' @click='loadSimulation'>Load</button>
+                            
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+        </div>
+        <!-- End Load Popup -->
+
+        <!-- Neuron editor Popup -->
+        <div id='editor-popup-container' class='popup-container' v-show='popups.editor'>
+            
+            <div id='editor-popup' class='popup'>
+
+                <!-- Header -->
+                <div id='editor-popup-header-container' class='popup-header-container'>
+                    <h5 id='editor-popup-header' class='popup-header'>Neuron Editor
+                    </h5>
+                </div>
+
+                <!-- Content -->
+
+                <div id='editor-popup-content-container'>
+
+                    <!-- Sidebar -->
+                    <div id='editor-popup-sidebar-container' class='popup-body-container editor-section'>
+
+                        <div id='editor-popup-sidebar' class='popup-body'>
+
+                            <div class='editor-sidebar-panel' id='editor-sidebar-panel-1' :class="{ active : editor.primary == '' }">
+
+                                <div class='editor-sidebar-item-container' v-for='option in editorOptions' @click='editor.primary = option' :class="{active: editor.primary == option}">
+
+                                    <div class='editor-sidebar-item'>
+                                        [[option]]
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                             <transition name="expand">
+                                <div v-show='editor.primary' class='editor-sidebar-panel' id='editor-sidebar-panel-2'>
+
+                                    <div class='editor-sidebar-item-container' v-for='option in secondaryOptions' @click='editor.secondary = option'>
+
+                                        <div class='editor-sidebar-item'>
+                                            [[option]]
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+                            </transition>
+
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <div id='editor-popup-body-container' class='popup-body-container editor-section'>
+
+                        <div id='editor-popup-body' class='popup-body'>
+
+                            <svg id='editor-neuron-display' v-html='svgData.innerHTML' width="300px" height="300px"   viewBox="0 0 26.458332 26.458334">
+
+                        </div>
+
+
+                    </div>
+                    <!-- End body -->
+
+                </div>
+                    <!-- End content -->
+
+            </div>
+        </div>
+        <!-- End Editor Popup -->
+
+    </div>
+
+    <!-- Toast Container -->
+    <div id='toast-container'>
+        <!-- Then put toasts within -->
+            <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true" v-for='toast in toasts' :id="'toast-'+toast.gid">
+              <div class="toast-header">
+                <!-- <img src="..." class="rounded mr-2" alt="..."> -->
+                <strong class="mr-auto" :class="'text-'+toast.level">[[toast.title]]</strong>
+                <small class="text-muted">[[toast.subtitle]]</small>
+                <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="toast-body">
+
+                <div class='toast-section' v-for='(val, key, index) in toast.messages'>
+                    <h5 class='toast-section-header'>[[key]]</h5>
+                    <ul>
+                        <li v-for='msg in val'>[[msg]]</li>
+                    </ul>
+              </div>
+
+              [[toast.message]]
+            </div>
+        </div>
 
     </div>
   
@@ -614,6 +936,8 @@
 
 <template id="neuron-template">
 </template>
+
+<script src="{% static 'spyke/data.js' %}"> </script>
 
 <script src="{% static 'spyke/interface.js' %}"> </script>
 

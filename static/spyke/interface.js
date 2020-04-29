@@ -1,54 +1,4 @@
-const stimulus_default = {
-    delay:5,
-    dur: 1,
-    amp: 0.1,
-    neuron: 0,
-    section: 'dendrite-1',
-    loc: 0.5,
-}
 
-const connectionDefault = {
-    gid: 0,
-    source: 0,
-    target: 0,
-    delay: 5,
-    section: 'dendrite-1',
-    loc: 0.5,
-    weight: 0.05,
-    threshold: 10,
-    tau: 2
-}
-
-const dendriteDefault = {
-    gid: 0,
-    L: 200,
-    diam: 1,
-    g: 0.001,
-    e: -65
-}
-
-const colorDict = {
-        purple:  '#b10dc9',
-        orange:  '#ff851b',
-        navy:    '#001f3f',
-        olive:   '#3d9970',
-        yellow:  '#ffdc00',
-        blue:    '#0074d9',
-        silver:  '#dddddd',
-        red:     '#ff4136',
-        aqua:    '#7fdbff',
-        fuchsia: '#f012be',
-        lime:    '#01ff70',
-        maroon:  '#85144b',
-        teal:    '#39cccc',
-        green:   '#2ecc40',
-        gray:    '#aaaaaa',
-        white:   '#ffffff',
-        black:   '#111111',
-        
-}
-
-const colors = Object.values(colorDict)
 
 Vue.config.delimiters = ["[[", "]]"]
 
@@ -57,10 +7,27 @@ var app = new Vue({
     delimiters: ['[[', ']]'],
     data: {
         settingsTab: 'simulation',
+        status: {
+            runningSim: false
+        },
+        popups: {
+            save: false,
+            load: false,
+            editor: false,
+        },
+        load: {
+            selected: "",
+        },
+        save: {
+            filename: "",
+        },
+        editor: {
+            gid: 1, 
+            primary: "",
+
+        },
         monitorTab: '',
         neurons: [],
-        neuronGid: 0,
-        connectionGid:0,
         dendriteGid:1,
         svgData:{},
         simulation: {
@@ -95,14 +62,14 @@ var app = new Vue({
              'attribute': 'L'},
              {'label': 'Diameter (ms)',
              'helptext': 'Microns',
-             'attribute': 'diam'},
-             {'label': 'Passive conductance',
-             'helptext': 'S/cm2',
-             'attribute': 'g',
-             'step': 0.001},
-             {'label': 'Reversal Potential',
-             'helptext': 'mV',
-             'attribute': 'e'}
+             'attribute': 'diam'}
+             // {'label': 'Passive conductance',
+             // 'helptext': 'S/cm2',
+             // 'attribute': 'g',
+             // 'step': 0.001},
+             // {'label': 'Reversal Potential',
+             // 'helptext': 'mV',
+             // 'attribute': 'e'}
              ],
         stimulusTypes: ['IClamp', 'VClamp', 'SEClamp'],
         connectionOptions: [
@@ -127,60 +94,59 @@ var app = new Vue({
              'helptext': 'Initial voltage of membranes',
              'attribute': 'potential'}
              ],
+        channels: channels(),
         connections: [],
         recording: {},
         monitor: false,
         views: [],
-        neuronTemplate: {}
+        neuronTemplate: {},
+        toasts: [],
+        savedFiles: [],
+        editorOptions: ["Sections", "Connections", "Channels"]
     },
     filters: {
 
     },
+    computed: {
+        editorNeuron: function() {
+            let matches = this.neurons.filter(x=> x.gid == this.editor.gid)
+            return matches.pop() || {}
+        },
+
+        secondaryOptions: function() {
+            let options = []
+            if ('soma' in this.editorNeuron) {
+                options.push('soma')
+            }
+            if ('axon' in this.editorNeuron) {
+                options.push('axon')
+            }
+            if ('dendrites' in this.editorNeuron) {
+                for (dendrite of this.editorNeuron.dendrites) {
+                    options.push('dendrite-' + dendrite.gid)
+                }
+                
+            }
+            return options;
+        },
+
+    },
     methods: {
+        // Utils
+
+        getMaxGid: function(component) {
+            let gids = this[component].map(x => x.gid);
+            gids.push(0)
+            return Math.max(...gids)
+        },
+
+        // Layout
+
         changeSettingsTab: function(tabname) {
             this.settingsTab = tabname;
         },
 
-        neuron: function() {
-            var neuron = {'open':false,
-                     'gid': 0,
-                     'name': 'neuron_0', 
-                    'soma':
-                        {
-                            'L': 12,
-                            'diam': 12,
-                            'gnabar': 0.12,
-                            'gkbar': 0.036,
-                            'gl': 0.0003,
-                            'el': -54.3
-                        },
-                    'dendrites': [
-                        {
-                            'gid': 1,
-                            'L': 200,
-                            'diam': 1,
-                            'g': 0.001,
-                            'e': -65
-                        }
-                        ],
-                    'axon': {
-                        'L': 200,
-                        'diam': 1,
-                        'g': 0.001,
-                        'e': -65
-                    },
-                    'general':
-                        {
-                            'Ra': 100,
-                            'cm': 1
-                        },
-                    'synapse':
-                        {
-                            'tau': 2
-                        }
-                    }
-            return neuron
-        },
+        neuron: neuronTemplate,
 
         changeMonitorTab: function(tabname) {
             this.monitorTab = tabname;
@@ -199,8 +165,8 @@ var app = new Vue({
 
         addConnection: function() {
             let copy = Object.assign({},connectionDefault);
-            this.connectionGid += 1;
-            copy.gid = this.connectionGid;
+
+            copy.gid = this.getMaxGid('connections') + 1;
             this.connections.push(copy);
         },
 
@@ -212,10 +178,9 @@ var app = new Vue({
         },
 
         addDendrite: function(index) {
-            let copy = Object.assign({},dendriteDefault);
-            this.dendriteGid += 1;
-            copy.gid = this.dendriteGid;
-            this.neurons[index].dendrites.push(copy);
+            let dend = dendriteTemplate();
+            dend.gid = Math.max(this.neurons[index].dendrites.map(x=>x.gid)) + 1
+            this.neurons[index].dendrites.push(dend);
         },
 
         removeDendrite: function(neuronGid, dendriteIndex) {
@@ -225,14 +190,27 @@ var app = new Vue({
             neuron.dendrites.splice(dendriteIndex, 1);
         },
 
+        addChannel: function(neuron, section) {
+            console.log("adding channel ", neuron, section)
+            let sec = this.getSection(neuron.gid, section)
+            let channel = channels().filter(x=> x.name == sec.data.selectedChannel).pop();
+            sec.channels.push(channel);
+        },
+
+        removeChannel: function(neuron, section, channel) {
+            let sec = this.getSection(neuron.gid, section)
+            sec.channels = sec.channels.filter(x=>x.name != channel)
+        },
+
+        getNeuron: function(neuronGid) {
+            return this.neurons.filter(x=> x.gid == neuronGid).pop();
+        },
+
         getSections: function(neuronGid) {
-            let neuron = this.neurons.filter(function(x) {
-                return x.gid == neuronGid
-            });
-            if (neuron.length < 1) {
+            let neuron = this.getNeuron(neuronGid);
+            if (neuron == undefined) {
                 return []
             }
-            neuron = neuron[0];
             let secs = ['soma', 'axon'].filter(x => {return x in neuron})
             for (dend of neuron.dendrites) {
                 secs.push('dendrite-' + dend.gid);
@@ -241,26 +219,62 @@ var app = new Vue({
 
         },
 
+        getSection: function(gid, section) {
+            console.log(gid, section, typeof(section))
+            let neuron = this.getNeuron(gid);
+            if (neuron == undefined) {
+                return neuron;
+            }
+            if (["axon", "soma"].includes(section)) {
+                return neuron[section];
+            }
+
+            if (section.startsWith('dendrite')) {
+                let dendGid = parseInt(section.slice(9))
+                let dend = neuron.dendrites.filter(x=>x.gid == dendGid).pop()
+                if (dend == undefined) {console.log("No dendrite with gid " + dendGid + " on neuron " + gid)}
+                return dend;
+            }
+        },
+
+        availableChannels: function(gid, section) {
+            console.log('available channels', gid, section)
+            let sec = this.getSection(gid, section)
+            if (sec == undefined) {
+                console.log("ERROR: no section found in available channels: ", gid, section)
+                return []
+            }
+            let used = sec.channels.map(x=>x.name);
+            let avail = this.channels.filter(x=> !(used.includes(x.name)));
+            console.log(avail, sec.data.selectedChannel)
+            let names = avail.map(x=>x.name);
+            if (names.length > 0){
+                console.log(names)
+                if (!(names.includes(sec.data.selectedChannel))) {
+                    sec.data.selectedChannel = names[0] || ""
+                }
+            }
+            return avail
+        },
+
+        // Neurons
+
         addNeuron: function() {
             console.log('adding Neuron')
-            let copy = this.neuron();
-            this.neuronGid += 1;
-            copy.gid = this.neuronGid;
-            copy.name = "neuron_" + this.neuronGid;
-            this.neurons.push(copy);
+            let neuron = this.neuron();
+            
+            let gid = this.getMaxGid('neurons') + 1;
+            neuron.gid = gid;
+            neuron.name = "neuron_" + gid;
+            neuron.x = (gid * 120) + 50 + "px";
+            neuron.y = (gid * 2) + 75 + "px";
+            this.neurons.push(neuron);
 
-            let newNeuron = this.svgData.cloneNode(true);
-            let x = (this.neuronGid * 120) + 50;
-            let y = (this.neuronGid * 2) + 75;
-            newNeuron.setAttribute('x', x + "px")
-            newNeuron.setAttribute('y', y + "px")
-            newNeuron.setAttribute('width', "150px")
-            newNeuron.setAttribute('height', "150px")
-            newNeuron.setAttribute('id', "neuron-" + this.neuronGid)
-            newNeuron.classList.add('neuron-container');
-            $('#svg-canvas-inner').append(newNeuron);
-            makeDraggable();
-            axonExtend();
+            setTimeout(function() {
+                makeDraggable();
+                axonExtend();
+            }, 100)
+            
         },
 
         removeNeuron: function(index) {
@@ -273,7 +287,7 @@ var app = new Vue({
                 this.removeConnection(connIndex);
             }
             // Destron neuron element
-            $('#neuron-' + neuron.gid).remove();
+            // $('#neuron-' + neuron.gid).remove();
             // Remove data element
             this.neurons.splice(index,1);
         },
@@ -301,13 +315,7 @@ var app = new Vue({
             }
         },
 
-        runSimulation: function() {
-            console.log('running simulation')
-
-            let url = '/spyke/simulation'
-            let csrftoken = Cookies.get('csrftoken');
-            let headers = {'X-CSRFToken': csrftoken};
-
+        getNeuronLocs: function() {
             let neurons = this.neurons;
             for (var i=0; i < neurons.length; i++) {
                 let neuron = neurons[i];
@@ -315,6 +323,73 @@ var app = new Vue({
                 this.neurons[i].x = parseInt(neuronElement.getAttribute('x'))
                 this.neurons[i].y = parseInt(neuronElement.getAttribute('y'))
             }
+        },
+
+        getSaved: function() {
+            let url = '/spyke/get_saved'
+            let csrftoken = Cookies.get('csrftoken');
+            let headers = {'X-CSRFToken': csrftoken};
+            axios.get(url,{headers: headers})
+              .then(response => {
+                  console.log(response.data)
+                  this.savedFiles = response.data.savedFiles;
+            });
+        },
+
+        saveSimulation: function() {
+            let url = '/spyke/save'
+            let csrftoken = Cookies.get('csrftoken');
+            let headers = {'X-CSRFToken': csrftoken};
+            this.getNeuronLocs();
+            let data = {};
+            data.neurons = this.neurons;
+            data.simulation = this.simulation;
+            data.stimuli = this.stimuli;
+            data.connections = this.connections;
+            data.filename = this.save.filename;
+            axios.post(url,data,{headers: headers})
+              .then(response => {
+                  console.log(response.data)
+                  this.toastObj(response.data)
+            });
+            this.savePopup(false);
+        },
+
+        loadSimulation: function() {
+            this.save.filename = this.load.selected;
+            let url = '/spyke/load'
+            let csrftoken = Cookies.get('csrftoken');
+            let headers = {'X-CSRFToken': csrftoken};
+            let data = {'filename': this.load.selected}
+            axios.post(url,data,{headers: headers})
+              .then(response => {
+                  console.log(response.data)
+                  let conf = response.data;
+                  let keys = Object.keys(conf)
+                  this.neurons = conf.neurons;
+                  this.simulation = conf.simulation;
+                  this.stimuli = conf.stimuli;
+                  this.connections = conf.connections;
+
+                  this.$nextTick(function () {
+                    this.drawConnections();
+                });
+                  this.toastObj(conf.message)
+            });
+            this.loadPopup(false);
+        },
+
+        runSimulation: function() {
+            console.log('running simulation')
+            let t0 = Date.now()
+
+            this.status.runningSim = true;
+
+            let url = '/spyke/simulation'
+            let csrftoken = Cookies.get('csrftoken');
+            let headers = {'X-CSRFToken': csrftoken};
+
+            this.getNeuronLocs();
 
             let data = {'time': this.simulation.time,
                         'potential': this.simulation.potential,
@@ -325,12 +400,31 @@ var app = new Vue({
             console.log(data)
             axios.post(url,data,{headers: headers})
               .then(response => {
+                  console.log("response ", Date.now() - t0)
                   console.log(response.data)
-                  let neuron_keys = Object.keys(response.data.cells);
-                  app.views = Object.keys(response.data.cells[neuron_keys[0]]);
-                  app.recording = response.data;
-                  app.changeMonitorTab("Soma voltage")
-            });
+                  // Clone and delete message
+                  let message = Object.assign({}, response.data.message);
+                  message.messages = Object.assign({}, message.messages);
+                  console.log(message)
+                  this.toastObj(message);
+                  delete response.data.message;
+                  if (response.data.cells) {
+                      let neuron_keys = Object.keys(response.data.cells);
+                      app.views = Object.keys(response.data.cells[neuron_keys[0]]);
+                      app.recording = response.data;
+                      console.log("drawing chart ", Date.now() - t0)
+                      app.changeMonitorTab("Soma voltage")
+                    }
+                  app.status.runningSim = false;
+                  console.log("updated ", Date.now() - t0)
+            })
+            .catch(function (error) {
+                // handle error
+                console.log("Error: ", error);
+                app.addToast("Error Running Simulation", "500 response",
+                              error, {}, "error");
+                app.status.runningSim = false;
+              });
         },
 
         drawChart: function(view) {
@@ -389,7 +483,67 @@ var app = new Vue({
                     }
                 }
             });
+        },
+
+        // Popups
+
+        closePopups: function() {
+            for (k of Object.keys(this.popups)) {
+                this.popups[k] = false;
+            }
+
+        },
+
+        savePopup: function(status='toggle') {
+            this.closePopups();
+            if (status == "toggle") {
+                this.popups.save = !this.popups.save;
+            } else {
+                this.popups.save = status;
+            }
+        },
+
+        loadPopup: function(status='toggle') {
+            this.closePopups();
+            if (status == "toggle") {
+                this.popups.load = !this.popups.load;
+            } else {
+                this.popups.load = status;
+            }
+                this.load.selected = ""
+                this.getSaved();
+        },
+
+        addToast: function(title, subtitle="", message="", messages=Object(), level="info") {
+            let gid = this.getMaxGid('toasts') + 1
+            console.log("messages: ", messages)
+            let toast = {
+                'title': title,
+                'subtitle': subtitle,
+                'message': message,
+                'messages': messages,
+                'level': level,
+                'gid': gid
+            }
+            this.toasts.push(toast);
+            this.$nextTick(function () {
+                    $('#toast-' + gid).toast({autohide:false});
+                    $('#toast-' + gid).toast('show');
+                });
+            if (level == 'success') {
+                setTimeout(function() {
+                    let idx = app.toasts.map(x=>x.gid).indexOf(gid);
+                    app.toasts.splice(idx, 1);
+                }, 5000)
+            }
+        },
+
+        toastObj: function(message) {
+            console.log("toast: ", message)
+            this.addToast(message.title, message.subtitle, message.message, message.messages, message.level);
         }
+
+        
     },
     mounted: function() {
         // Load neuron svg 
@@ -397,6 +551,9 @@ var app = new Vue({
             app.svgData = xml.documentElement;
             app.addNeuron();
         });
+
+        // Get saved files
+        this.getSaved();
 
         // Create panzoom in neuron canvas
         var element = document.querySelector('#svg-canvas-inner')
@@ -417,6 +574,9 @@ var app = new Vue({
             }
             
         });
+
+        // Unhide popups
+        document.getElementById('popup-container').classList.remove('hide');
     }
 });
 
@@ -666,5 +826,6 @@ window.onload = function() {
     // Make neurons draggable
     makeDraggable();
     axonExtend();
+    $('.toast').toast({autohide:false});
 }
 

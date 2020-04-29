@@ -1,0 +1,29 @@
+{
+    "cagk": {
+        "d1_cagk": 0.84,
+        "d2_cagk": 1.0,
+        "k1_cagk": 0.18,
+        "k2_cagk": 0.011,
+        "bbar_cagk": 0.28,
+        "abar_cagk": 0.48,
+        "oinf_cagk": 0.0,
+        "tau_cagk": 0.0
+    },
+    "hh2": {},
+    "CaT": {
+        "usetable_CaT": 1.0
+    },
+    "kd": {},
+    "kext": {
+        "kbath_kext": 10.0
+    },
+    "cadifus": {
+        "DCa_cadifus": 0.6,
+        "k1buf_cadifus": 100.0,
+        "k2buf_cadifus": 0.1,
+        "TotalBuffer_cadifus": 0.003,
+        "vrat_cadifus": [
+            "vrat_cadifus[]"
+        ]
+    }
+}
