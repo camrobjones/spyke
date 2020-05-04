@@ -2,4 +2,6 @@ __pycache__/*
 .DS_Store
 static/.DS_Store
 migrations/
-data/*
+data/simulations/*
+data/models/x86_64/*
+data/models/ActiveMechanisms/*
