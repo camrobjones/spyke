@@ -93,3 +93,13 @@ class Message():
         out['level'] = self.level
 
         return out
+
+
+def params2dict(params):
+    """Convert array based params to dictionaries"""
+    # TODO: handle client side to reduce data load
+    out = {}
+    for param in params:
+        out[param['name']] = param['value']
+
+    return out

@@ -57,33 +57,127 @@ Connecting
     - List available parameters
         - (could manual & generate json on create)
 
-- Cleanup backend
+- ~~Cleanup backend~~
     - ~~Section classes~~
     - ~~axon backend~~
     - ~~Rename "BallAndStick"~~
 
 - ~~Select & test 5 good basic ion channels~~
 
-- Consolidate frontend
-    - dendrite frontend!
+- ~~Consolidate frontend~~
+    - ~~dendrite frontend!~~
 
-- Track ion concentration
+- ~~Synapses~~
+    - ~~Create connections from axon??~~
+    - ~~Voltage etc~~
 
-- Synapses
-    - Create connections from axon??
-    - Voltage etc
+- AC current
+    - ~~backend params~~
+    - ~~frequency gradient~~
+    - ~~Handle float/zero oscillations~~
+    - ~~uncomment exception handling~~
+    - ~~try paper stuff~~
+
+- Recordings
+    - ~~Stimulus currents~~
+        - ~~Name stimuli~~
+    - ~~Ion concentrations~~
+    - ~~Ion currents~~
+    - ~~Voltage in other sections~~
+        - ~~Neurons all one color & label~~
+    - ~~chart ylabel~~
+    - ~~Get chart labels dynamically~~
+    - NC spikes
+    - ~~Spiking in general~~
+    - Cleanup chart function
+    
 
 - Segment level
 
 - Neuron editor
 
-
-- global variables (e.g. kbath)
-    - Push to simulation tab?
-
 - Changing ion concentrations
 
 - Jo notes
+
+- Push & prepare examples
+
+- Ion channels
+    - How granular
+
+- Stims
+    - ~~Choose segment & section~~
+    - ~~Choose stimulus type~~
+    - ~~Alternating current~~
+    - Step current
+    - stimulus names (and preview)
+    - Representation in minimap
+
+- Neurons
+    - pre-specified neurons
+    - ~~Multiple dendrites~~
+    - ~~edit axon~~
+    - ~~channel density~~
+    - nseg
+    - all dendrites as one
+    - neurotransmitters
+    - point processes
+    - global variables (e.g. kbath)
+        - Push to simulation tab?
+
+- Simulation
+    - temperature
+    - update interval
+    - Custom recordings
+    - performance
+    - incremental for long stretches
+    - compress vectors?
+    - implement reset
+
+Views
+    - ~~1 color per neuron~~
+    - ~~plotLabels~~
+    - ~~axisLabels~~
+    - ~~Fix x-axis t~~
+    - ~~Fix Dend V recordings~~
+    - LFP summation
+    - spike portraits
+        - Better tooltips
+        - Gridlines
+    - heatmap for neuron
+    - by-dendrite heatmaps
+    - Phase portraits
+    - Heatmaps
+    - Viz popout
+    - save/download plots
+    - plot multiple values in one view
+
+
+- Connections
+    - Refactor connection code
+    - More types of synapse
+    - Connection Matrix
+
+- Recording
+    - Impedance
+
+- General
+    - User accounts
+    - localise dependencies
+
+
+- expand/minimize monitor/config
+
+- Read & implement papers
+
+Sources
+-------
+
+- Read NEURON book!
+    - https://neuron.yale.edu/ftp/ted/book/revisions/chap10indexedref.pdf
+
+- nrn utils:
+    - https://bitbucket.org/apdavison/nrnutils/src/default/nrnutils.py
 
 My First Neuron
 - https://senselab.med.yale.edu/modeldb/ShowModel?model=3808&file=/MyFirstNEURON/manual.htm#tabs-2
@@ -102,72 +196,9 @@ My First Neuron
 - IC genealogy
     - https://icg.neurotheory.ox.ac.uk/viewer/2
 
-- Ion channels
-    - How granular
-
-- Qs
-    - Interface usability
-
-
-- Fix viz
-
-- Stims
-    - ~~Choose segment & section~~
-    - Choose stimulus type
-    - Rhythmic/repeated stimulation
-    - Representation in minimap
-    - Alternating current
-
-- Neurons
-    - pre-specified neurons
-    - ~~Multiple dendrites~~
-    - ~~edit axon~~
-    - custom ion channels
-    - ~~channel density~~
-    - nseg
-    - all dendrites as one
-
-- Simulation
-    - temperature
-    - update interval
-    - Custom recordings
-    - performance
-    - incremental for long stretches
-    - compress vectors?
-
-- Recording
-    - Impedance
-
-- General
-    - User accounts
-
-
-- expand/minimize monitor/config
-
-- Read & implement papers
-
-- Read NEURON book!
-    - https://neuron.yale.edu/ftp/ted/book/revisions/chap10indexedref.pdf
-
-- nrn utils:
-    - https://bitbucket.org/apdavison/nrnutils/src/default/nrnutils.py
-
-Views
-    - ~~1 color per neuron~~
-    - Fix Dend V recordings
-    - LFP summation
-    - spike portraits
-    - Phase portraits
-    - Heatmaps
-    - Viz popout
-
 
 Questions
 ---------
-- Interneurons
-    - When I do negative weights I get very strange negative voltages.
-    - Is this expected?
-
 - How to generate rhytmic behaviour in single neuron
     - Increasing Na conductance seems to work
     - Constant IClamp doesn't
@@ -181,18 +212,26 @@ Questions
 - Synapses
     - Which to use for connections
     - One synapse per connection?
+    - All synapses the same for source?
 
 - Papers
     - How to implement Hutcheon & Yarom
 
+- sections
+    - All equal? Privilege soma? Soma/axon/dendrites? Others?
+
 
 ========
 Later
+----
 
 - Robustness
     - Enforce unique GIDS
     - Better error handling on keys being passed to backend
+        - e.g. title key from stimulus
     - Prevent delete soma
+    - tests
+    - Multiple AC clamps on one neuron
 
 - Layout
     - ~~Harmonize Stimulus and Neuron CSS~~
@@ -214,6 +253,7 @@ Later
     - dendrite collapse
     - dendrite numbering
     - select, copy and paste objects in canvas
+    - Timestamp notifications
 
 - Refactoring
     - Move neuron template outside app
@@ -229,12 +269,14 @@ Later
     - Fix dendrite gid settings!
     - Mechanism classes
     - Mechanism data 
+    - Separate data from help/title/step
 
 - Features
     - rename neurons
     - reaction diffusion
     - neuromorpho db
-    - connectivity matrix
+    - custom ion channels
+    - introduce some randomness?
 
 - Goals
     - Insert modeldb url and it pings, compiles, and runs
@@ -242,25 +284,23 @@ Later
 
 
 
-- plotLabels
-- axisLabels
+Notes
+-----
 
-- logging
-- implement reset
+Getting nrnivmodl to work on ubuntu required installing libx11-dev
 
-- save/download plots
-- plot multiple values in one view
+Installing on Ubuntu server
 
-- localise dependencies
+https://www.neuron.yale.edu/neuron/download/compile_linux
 
-- tests
+downloaded tars from 
+`https://neuron.yale.edu/ftp/neuron/versions/alpha/`
+(iv-19; nrn-7.7.2)
 
-- viz
-    - spike times
-    - separate neurons on different y-axis points
-    - heatmap for neuron
-    - by-dendrite heatmaps
+cloned to `~/software`
+required 8g swapfile: /mnt/8g.swap
 
-- recording
+`./configure --with-iv --with-paranrn --with-nrnpython=/home/cameron/camrobjones/camrobjones/bin/python3`
 
+`sudo /home/cameron/camrobjones/camrobjones/bin/python3 setup.py install`
 

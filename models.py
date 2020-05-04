@@ -11,12 +11,13 @@ https://bitbucket.org/apdavison/nrnutils/src/default/nrnutils.py
 """
 
 import logging
-import json
 from pprint import pprint
 
 import numpy as np
 from neuron import h, nrn, load_mechanisms
 from neuron.units import ms, mV
+
+from spyke import glial
 h.load_file('stdrun.hoc')
 
 load_mechanisms('spyke/data/models/')
@@ -31,6 +32,9 @@ Constants
 PROXIMAL = 0
 DISTAL = 1
 
+# Stimulus parameters
+TEMPORAL_RESOLUTION = 10  # frames per ms
+BUFFER = 5  # ms of 0 current to prevent interpolation errors
 
 """
 Global variables
@@ -41,27 +45,6 @@ Global variables
 # vrat_cadifus = h.vrat_cadifus
 # vrat_cadifus[3] = 0.5
 # h.vrat_cadifus = vrat_cadifus
-
-
-def get_mech_globals(mechname, var=-1):
-    ms = h.MechanismStandard(mechname, var)
-    name = h.ref('')
-    mech_globals = {}
-    for j in range(ms.count()):
-        ms.name(name, j)
-        mech_globals[name[0]] = getattr(h, name[0])
-    return mech_globals
-
-
-def mech_global_params(outfile="spyke/static/spyke/globalparams.json"):
-    """Create dict of all global parameters"""
-    data = {}
-    for mech in ['cagk', 'hh2', 'CaT', 'kd', 'kext', 'cadifus']:
-        data[mech] = get_mech_globals(mech)
-    if outfile:
-        with open(outfile) as f:
-            json.dump(data, f, indent=4)
-    return data
 
 
 class Mechanism(object):
@@ -81,6 +64,101 @@ class Mechanism(object):
             for segment in section:
                 mech = getattr(segment, self.name)
                 setattr(mech, name, value)
+
+
+def alternating_current(amp_min, amp_max, dur, delay, freq0, freq1=None):
+    """
+    Create an sin wave from amp_min to amp_max at freq0 for dur ms
+
+    returns tuple(t_vec, amp_vec)
+        t_vec (h.Vector) time vector
+        amp_vec (h.Vector) vector of amplitude values
+
+    """
+
+    # TODO: Prevent rounding of oscillations, period
+
+    if freq1 is None:
+        freq1 = freq0
+
+    # convert freq to ms
+    freq0 = freq0 / 1000
+    freq1 = freq1 / 1000
+
+    # Find mean freq, period, and no. oscillations
+    freq_mean = np.mean([freq0, freq1])
+    period_mean = 1/freq_mean
+    dur = int(dur)
+    oscillations = int(dur / period_mean)
+
+    # gradient from freq0 to freq1
+    freqs = np.linspace(freq0, freq1, oscillations)
+    # pad to circumvent rounding down
+    freqs = np.append(freqs, freqs[-1])
+
+    # create sin wave
+    pi_vals = np.array([])
+    for freq in freqs:
+        period = int((1/freq) * TEMPORAL_RESOLUTION)  # no. frames
+        pi_vals = np.append(pi_vals, np.linspace(0, 2 * np.pi, period))
+
+    vals = np.sin(pi_vals)[:dur * TEMPORAL_RESOLUTION]
+
+    # add buffer time to prevent interpolation errors
+    vals = np.append(vals, np.zeros(BUFFER * TEMPORAL_RESOLUTION))
+    # add delay zeros at beginning
+    vals = np.append(np.zeros(int(delay) * TEMPORAL_RESOLUTION), vals)
+
+    # normalize current
+    amp_diff = amp_max - amp_min
+    vals = (vals + 1) / 2  # normalize between 0 and 1
+    vals = vals * amp_diff  # normalize between 0 and amp_diff
+    vals = vals + amp_min  # normalize between amp_min and amp_max
+
+    # create time vector
+    dur = dur + BUFFER  # add buffer time to prevent interpolation errors
+    t_vec = h.Vector(np.linspace(0, int(delay) + dur + BUFFER, len(vals)))
+    amp_vec = h.Vector(vals)
+
+    return t_vec, amp_vec
+
+
+class ACClamp():
+    """
+    Wrapper for h.IClamp with alternating current
+
+    Parameters
+    ----------
+
+    """
+    def __init__(self, seg, name, delay, amp_min, amp_max, dur, freq0, freq1=None):
+        self.name = name
+        self.stim = h.IClamp(seg)
+        self.t_vec, self.amp_vec = alternating_current(amp_min, amp_max, dur,
+                                                       delay, freq0, freq1)
+        self.stim.dur = dur
+        self.stim.delay = delay
+        self.amp_vec.play(self.stim._ref_amp, self.t_vec, 1)
+
+        self.records = {}
+        self.records['i'] = h.Vector().record(self.stim._ref_i)
+        self.records['amp'] = h.Vector().record(self.stim._ref_amp)
+
+
+class Stimulus():
+    """
+    Helper class to create nrn Point Processes
+
+    """
+    def __init__(self, seg, stim_type, name, **params):
+        self.name = name
+        self.stim = getattr(h, stim_type)(seg)
+        for k, v in params.items():
+            setattr(self.stim, k, v)
+
+        self.records = {}
+        self.records['i'] = h.Vector().record(self.stim._ref_i)
+        self.records['amp'] = h.Vector().record(self.stim._ref_amp)
 
 
 class Section(nrn.Section):
@@ -107,6 +185,8 @@ class Section(nrn.Section):
         for mechanism in mechanisms:
             mechanism.insert_into(self)
 
+        self.records = {}
+
     def set_geometry(self, L, diam, nseg):
         # set geometry
         self.L = L
@@ -132,6 +212,18 @@ class Section(nrn.Section):
         self.spikecount = h.APCount(0.5, sec=self)
         self.spikecount.thresh = threshold
         self.spikecount.record(self.spiketimes)
+        self.records['spikes'] = self.spiketimes
+
+    def _setup_recording(self):
+        self.records['v'] = h.Vector().record(self(0.5)._ref_v)
+        data = self.psection()
+        for ion, vals in data['ions'].items():
+            # loop through current and internal concentration
+            for key in [f"i{ion}", f"{ion}i"]:
+                if key in vals:
+                    ref = getattr(self(0.5), f"_ref_{key}")
+                    self.records[key] = h.Vector().record(ref)
+        self.record_spikes()
 
 
 class Cell(object):
@@ -163,16 +255,16 @@ class Cell(object):
         # Initialise basic and default attributes
         self.params = params or {}
         self._gid = gid
-        self.name = None
+        self.name = params.get('name', f"Neuron {gid}")
         self.stimuli = []
         self.syns = []
         self.data = {}
         self.sections = {}
+        self.vectors = []
 
         logger.info('setting up morphology')
         # Setup morphology and biophysics
         self._setup_morphology()
-        logger.info('xxx')
         self.all = self.soma.wholetree()
         logger.info('setting up biophysics')
         self._setup_biophysics()
@@ -202,18 +294,11 @@ class Cell(object):
         # Time
         self.data['t'] = h.Vector().record(h._ref_t)
         # Soma Voltage
-        self.data['soma_v'] = h.Vector().record(self.soma(0.5)._ref_v)
-        # self.data['ik'] = h.Vector().record(self.soma(0.5)._ref_ik)
-        # self.data['ina'] = h.Vector().record(self.soma(0.5)._ref_ina)
-        # self.data['ek'] = h.Vector().record(self.soma(0.5)._ref_ek)
-        # self.data['ena'] = h.Vector().record(self.soma(0.5)._ref_ena)
-        # self.data['cai'] = h.Vector().record(self.soma(0.5)._ref_cai)
-        # self.data['i'] = h.Vector().record(self.soma(0.5)._ref)
-        # self.data['ica'] = h.Vector().record(self.soma(0.5)._ref_ica)
-        # self.data['cao'] = h.Vector().record(self.soma(0.5)._ref_cao)
+        # self.data['soma_v'] = self.soma.records['v']
+
         # Spike times
-        self.soma.record_spikes()
-        self.data['spike_times'] = self.soma.spiketimes
+        # self.soma.record_spikes()
+        # self.data['spike_times'] = self.soma.spiketimes
 
     def __repr__(self):
         return '{}[{}]'.format(self.name, self._gid)
@@ -247,22 +332,29 @@ class Cell(object):
                 sec.pt3dchange(i, xprime, yprime, sec.z3d(i), sec.diam3d(i))
 
     @property
-    def recordings(self):
+    def records(self):
         """Format and return recording data."""
 
         data = self.data
 
-        #  Reorganize spike times to one-hot time format
-        spike_times = data['spike_times'].to_python()
-        time = np.array(data['t'])
-        spikes = np.zeros(len(time))
-        for spike in spike_times:
-            closest = np.argmin(abs(time - spike))
-            spikes[closest] = 1
+        for name, sec in self.sections.items():
+            for key, record in sec.records.items():
+                cell_record = data.get(key, {})
+                cell_record[name] = glial.compress_array(record.as_numpy())
+                data[key] = cell_record
 
-        recordings = {
-            "Spike Times": list(spikes),
-            "Soma voltage": data['soma_v'].to_python(),
+        #  Reorganize spike times to one-hot time format
+        # TODO: Move to sections. Property?
+        # spike_times = data['spike_times'].to_python()
+        # time = glial.compress_array(np.array(data['t']), frmt=None)
+        # spikes = np.zeros(len(time))
+        # for spike in spike_times:
+        #     closest = np.argmin(abs(time - spike))
+        #     spikes[closest] = 1
+
+        # recordings = {
+            # "Spike Times": list(spikes),
+            # "Soma voltage": glial.compress_array(data['soma_v'].to_python()),
             # "cai": data['cai'].to_python(),
             # "cao": data['cao'].to_python(),
             # "ica": data['ica'].to_python(),
@@ -272,8 +364,8 @@ class Cell(object):
             # "ena": data['ena'].to_python(),
             # "Dendrite voltage": data['dend_v'].to_python(),
             # "Synapse current": data['syn_i'].to_python()
-            }
-        return recordings
+            # }
+        return data
 
 
 class SimpleNeuron(Cell):
@@ -354,6 +446,13 @@ class SimpleNeuron(Cell):
             name = f"dendrite-{dend['gid']}"
             self._add_channels(name, dend)
 
+    def _setup_recording(self):
+        """Instruct sections to create recordings"""
+        # TODO: Definitely consolidate section setup into one function.
+        # Makes sense so we can enforce order
+        for sec in self.sections.values():
+            sec._setup_recording()
+
 
     def getSection(self, section):
         """Return a section of the cell using a string key"""
@@ -364,26 +463,29 @@ class SimpleNeuron(Cell):
             sec = self.dendrites[index]
         return sec
 
-    def add_stimulus(self, section, loc, delay, dur, amp):
+    def add_stimulus(self, section, loc, stim_type, name, parameters):
         """Add a new Point Process to the cell.
 
         Parameters
         ----------
-        delay : int
-            Time before stimulus onset (ms)
-        dur : int
-            Time which stimulus lasts for
-        amp : float
-            Amplitude of stimulus (nA)
+        section : h.Section
+            section to add stim
+        loc : float
+            Location on section to add stim
+        stim_type: str
+            Name of h.PointProcess or helper class
+        params : kwargs
+            Parameters for stim type
 
         """
         sec = self.getSection(section)
-        stim = h.IClamp(sec(loc))
-        stim.get_segment()
+        seg = sec(loc)
 
-        stim.delay = delay
-        stim.dur = dur
-        stim.amp = amp
+        if stim_type == "ACClamp":
+            stim = ACClamp(seg, name, **parameters)
+
+        else:
+            stim = Stimulus(seg, stim_type, name, **parameters)
 
         self.stimuli.append(stim)
 
@@ -405,6 +507,13 @@ class Simulation:
         self.nc_spikes = []
         logger.info("simulation cells: : %s", self.cells)
 
+    @property
+    def stimuli(self):
+        stims = []
+        for cell in self.cells:
+            stims += cell.stimuli
+        return stims
+
     def run(self, potential=-65, runtime=25):
         """Run the simulation
 
@@ -418,7 +527,7 @@ class Simulation:
         h.finitialize(potential * mV)
         data = {}
         for mech in ['cagk', 'hh2', 'CaT', 'kd', 'kext', 'cadifus']:
-            data[mech] = get_mech_globals(mech)
+            data[mech] = glial.get_mech_globals(mech)
 
         # for gid, cell in self.cells.items():
             # pprint(cell.soma.psection())
@@ -429,13 +538,14 @@ class Simulation:
             # pprint(cell.soma.psection())
 
     def add_connection(self, source, target, delay, weight, threshold,
-                       section, loc, tau):
+                       section, loc, tau, e):
         """Add a connection to the model"""
         # Get target section
         sec = target.getSection(section)
         # Add synapse
         syn = h.ExpSyn(sec(loc))
         syn.tau = tau * ms
+        syn.e = e
         target.syns.append(syn)
 
         nc = h.NetCon(source.axon(1)._ref_v, syn, sec=source.axon)
@@ -452,15 +562,39 @@ class Simulation:
     def output(self):
         """Format output of simulation for plotting"""
         output = {}
-        time = [round(tp) for tp in self.timevec.to_python()]
+        timevec = glial.compress_array(self.timevec.as_numpy())
+        # time = [round(tp) for tp in timevec]
+        time = timevec
         output['t'] = time
-        recordings = {}
+
+        # Output spikes TODO
         output['nc_spikes'] = []
         for nc_spike in self.nc_spikes:
             output['nc_spikes'].append(nc_spike.to_python())
 
+        # Views
+        views = {}
+        amp = {}
         for gid, cell in self.cells.items():
-            logger.info("output cell gid: : %s", gid)
-            recordings[gid] = cell.recordings
-        output['cells'] = recordings
+            for key, record in cell.records.items():
+                sim_record = views.get(key, {})
+                sim_record[cell.name] = record
+                views[key] = sim_record
+
+            cell_stims = {}
+            for i, stim in enumerate(cell.stimuli):
+                rec = glial.compress_array(stim.records['amp'].as_numpy())
+                cell_stims[stim.name] = rec
+            amp[cell.name] = cell_stims
+
+        views['amp'] = amp
+
+        # amp = {}
+        # for stim in self.stimuli:
+        #     stim_record = {}
+        #     stim_record[stim.name] = stim.records['amp']
+        #     amp[stim.name] = stim_record
+        # views['amp'] = amp
+
+        output['views'] = views
         return output

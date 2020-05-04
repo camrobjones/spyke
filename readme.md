@@ -29,6 +29,20 @@ Update: 20th Apr 2020
 - Plot multiple neurons in different colors
 - More compact design of config options
 
+Update: 4th May 2020
+
+- Multiple ion channels
+    - Choose from a selection of ion channels for each section
+- New Visualizations
+    - Visualize ion currents and concentrations
+    - Visualise voltage of all sections in separate traces
+    - New spike visualization
+    - Visualize amperage of current from stimuli 
+- Alternating current clamps.
+    - Set frequency or gradient from one frequency to another.
+- Set Equilibrium potential of synaptic connections
+    - Allows for effectively inhibitory connections
+- Save and load simulations
 
 
 
@@ -37,8 +51,27 @@ Roadmap
 
 Planned features include:
 
-- Create multiple neurons and connect them via axons.
-- Save and download plots
-- Save and load simulations
-- Multiple stimulus types
-- Plot multiple voltages at once
+- Neuron editor
+    - Save and load neuron templates
+    - Create hierarchical dendrite parent-child relationships
+    - Segment-level control of diameter and ion channel densities
+    - Accurate visual representation of neuron parameters
+
+- Connectivity
+    - Connectivity Matrix
+    - Multiple types of synapses
+
+- Ion channels
+    - More choice
+    - Better organization
+    - Neurotransmitter mediated processes
+    - Eventually custom ion channels which create NMODL files
+
+- Visualizations
+    - Customize visualizations bringing arbitrary pieces of data together
+    - Save data from previous runs to plot together (e.g. temperature from different simulations)
+    - Save and download plots
+    - LFP summation
+    - Heatmaps
+
+- Voltage and SE clamp stimuli

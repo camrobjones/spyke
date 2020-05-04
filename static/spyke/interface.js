@@ -7,6 +7,7 @@ var app = new Vue({
     delimiters: ['[[', ']]'],
     data: {
         settingsTab: 'simulation',
+        colors: colors,
         status: {
             runningSim: false
         },
@@ -34,28 +35,22 @@ var app = new Vue({
             'time': 25,
             'potential': -65
         },
-        stimuli: [
-            {
-            delay:5,
-            dur: 1,
-            amp: 0.1,
-            neuron: 1,
-            section: "dendrite-1",
-            loc: 0.5
-            }
-        ],
-        stimulusOptions: [
-            {'label': 'Delay (ms)',
-             'helptext': 'Time before stimulus onset',
-             'attribute': 'delay'},
-             {'label': 'Duration (ms)',
-             'helptext': 'Duration of stimulus',
-             'attribute': 'dur'},
-             {'label': 'Amp (nA)',
-             'helptext': 'Amplitude of stimulus',
-             'attribute': 'amp',
-             'step': 0.1},
-             ],
+        stimuli: [],
+        availableStimuli: stimuli(),
+        selectedStimulus: "IClamp",
+        // stimulusTypes: ['IClamp', 'VClamp', 'SEClamp'],
+        // stimulusOptions: [
+        //     {'label': 'Delay (ms)',
+        //      'helptext': 'Time before stimulus onset',
+        //      'attribute': 'delay'},
+        //      {'label': 'Duration (ms)',
+        //      'helptext': 'Duration of stimulus',
+        //      'attribute': 'dur'},
+        //      {'label': 'Amp (nA)',
+        //      'helptext': 'Amplitude of stimulus',
+        //      'attribute': 'amp',
+        //      'step': 0.1},
+        //      ],
         sectionOptions: [
             {'label': 'Length',
              'helptext': 'Microns',
@@ -71,7 +66,6 @@ var app = new Vue({
              // 'helptext': 'mV',
              // 'attribute': 'e'}
              ],
-        stimulusTypes: ['IClamp', 'VClamp', 'SEClamp'],
         connectionOptions: [
             {'label': 'Delay (ms)',
              'helptext': 'Time between threshold crossing and event delivery',
@@ -84,7 +78,10 @@ var app = new Vue({
              'attribute': 'threshold'},
              {'label': 'Tau (ms)',
              'helptext': 'Decay time constant of synapse',
-             'attribute': 'tau'}
+             'attribute': 'tau'},
+             {'label': 'Reversal potential (mV)',
+             'helptext': 'Reversal potential of synapse',
+             'attribute': 'e'}
              ],
         simulationOptions: [
             {'label': 'Time (ms)',
@@ -99,6 +96,7 @@ var app = new Vue({
         recording: {},
         monitor: false,
         views: [],
+        chartKey: chartKey,
         neuronTemplate: {},
         toasts: [],
         savedFiles: [],
@@ -130,14 +128,38 @@ var app = new Vue({
             return options;
         },
 
+        maxTime: function() {
+             if ('t' in this.recording) {
+                return Math.max(...this.recording.t)
+             }
+             else {
+                return 1
+             }
+        },
+
+        xticks: function() {
+            return niceTicks(this.maxTime)
+        },
+
+        maxTick: function() {
+            return this.xticks.pop();
+        }
+
     },
     methods: {
         // Utils
 
         getMaxGid: function(component) {
-            let gids = this[component].map(x => x.gid);
+            if (typeof(component) == "string") {
+                component = this[component]
+            }
+            let gids = component.map(x => parseInt(x.gid));
             gids.push(0)
             return Math.max(...gids)
+        },
+
+        getTimeProp: function(time) {
+            return parseInt((time / this.maxTick) * 100) + "%"
         },
 
         // Layout
@@ -150,16 +172,23 @@ var app = new Vue({
 
         changeMonitorTab: function(tabname) {
             this.monitorTab = tabname;
-            this.drawChart(tabname);
+            this.$nextTick(function(){
+                if (tabname != "spikes") {
+                    app.drawChart(tabname);
+                }  
+            })
         },
 
-        addStimulus: function() {
-            let copy = Object.assign({},stimulus_default);
-            this.stimuli.push(copy);
+        addStimulus: function(name) {
+            let stim = getStimulus(name);
+            stim.gid = this.getMaxGid('stimuli') + 1;
+            stim_type_idx = this.stimuli.filter(
+                x=>x.stim_type == name).length + 1;
+            stim.name = stim.stim_type + " " + stim_type_idx
+            this.stimuli.push(stim);
         },
 
         removeStimulus: function(index) {
-            console.log(`removing ${index}`);
             this.stimuli.splice(index,1);
         },
 
@@ -171,7 +200,6 @@ var app = new Vue({
         },
 
         removeConnection: function(index) {
-            console.log(`removing connection ${index}`);
             let connection = this.connections[index];
             $('#connection-' + connection.gid).remove();
             this.connections.splice(index,1);
@@ -179,7 +207,7 @@ var app = new Vue({
 
         addDendrite: function(index) {
             let dend = dendriteTemplate();
-            dend.gid = Math.max(this.neurons[index].dendrites.map(x=>x.gid)) + 1
+            dend.gid = this.getMaxGid(this.neurons[index].dendrites) + 1
             this.neurons[index].dendrites.push(dend);
         },
 
@@ -191,7 +219,6 @@ var app = new Vue({
         },
 
         addChannel: function(neuron, section) {
-            console.log("adding channel ", neuron, section)
             let sec = this.getSection(neuron.gid, section)
             let channel = channels().filter(x=> x.name == sec.data.selectedChannel).pop();
             sec.channels.push(channel);
@@ -220,7 +247,6 @@ var app = new Vue({
         },
 
         getSection: function(gid, section) {
-            console.log(gid, section, typeof(section))
             let neuron = this.getNeuron(gid);
             if (neuron == undefined) {
                 return neuron;
@@ -238,7 +264,6 @@ var app = new Vue({
         },
 
         availableChannels: function(gid, section) {
-            console.log('available channels', gid, section)
             let sec = this.getSection(gid, section)
             if (sec == undefined) {
                 console.log("ERROR: no section found in available channels: ", gid, section)
@@ -246,10 +271,8 @@ var app = new Vue({
             }
             let used = sec.channels.map(x=>x.name);
             let avail = this.channels.filter(x=> !(used.includes(x.name)));
-            console.log(avail, sec.data.selectedChannel)
             let names = avail.map(x=>x.name);
             if (names.length > 0){
-                console.log(names)
                 if (!(names.includes(sec.data.selectedChannel))) {
                     sec.data.selectedChannel = names[0] || ""
                 }
@@ -265,7 +288,7 @@ var app = new Vue({
             
             let gid = this.getMaxGid('neurons') + 1;
             neuron.gid = gid;
-            neuron.name = "neuron_" + gid;
+            neuron.name = "Neuron " + gid;
             neuron.x = (gid * 120) + 50 + "px";
             neuron.y = (gid * 2) + 75 + "px";
             this.neurons.push(neuron);
@@ -408,12 +431,12 @@ var app = new Vue({
                   console.log(message)
                   this.toastObj(message);
                   delete response.data.message;
-                  if (response.data.cells) {
-                      let neuron_keys = Object.keys(response.data.cells);
-                      app.views = Object.keys(response.data.cells[neuron_keys[0]]);
+                  if (response.data.views) {
+                      // let neuron_keys = Object.keys(response.data.cells);
+                      app.views = Object.keys(response.data.views);
                       app.recording = response.data;
                       console.log("drawing chart ", Date.now() - t0)
-                      app.changeMonitorTab("Soma voltage")
+                      app.changeMonitorTab("v")
                     }
                   app.status.runningSim = false;
                   console.log("updated ", Date.now() - t0)
@@ -428,58 +451,128 @@ var app = new Vue({
         },
 
         drawChart: function(view) {
-            console.log(`plottihg new chart: ${view}`)
+            console.log(`plotting new chart: ${view}`)
             var ctx = document.getElementById('monitor-canvas');
+            console.log(ctx)
             ctx.height = "300px"
             if (this.monitor) {
                 this.monitor.destroy();
             }
-            let cells = Object.keys(this.recording.cells);
-            console.log("cells", cells)
-            var yLabel = "Soma Voltage (mV)";
+            let cells = Object.keys(this.recording.views[view]);
+
+            var yLabel = this.chartKey[view].ylab;
             let datasets = [];
             var primaryColor = "#36005d"
+
+            // Loop through cells
             for (var i=0; i < cells.length; i++) {
-                let k = cells[i]
-                let cellData = {
-                'label': "Neuron " + k,
-                'data': this.recording['cells'][k][view],
-                'fill': false,
-                // borderColor:"rgb(75, 192, 192)",
-                "borderColor" :colors[i],
-                "lineTension" :0.1
-                };
-                datasets.push(cellData)
+                let cell = cells[i]
+                let sections = this.recording.views[view][cell]
+                // Loop through sections
+                for (section in sections) {
+
+                    let yData = sections[section];
+                    let xydata = []
+                    for (j=0; j < yData.length; j++) {
+                        xydata.push({
+                            "x": this.recording.t[j],
+                            "y": yData[j]
+                        })
+                    }
+                    let color = colors[i]
+                    let name = cell;
+                    if (section.includes('axon') | section.includes('dendrite')) {
+                        color = hexToRgba(color, 0.5)
+                        name = cell + ": " + section;
+                    } else if (view == 'amp') {
+                        // Hacky fix for stims TODO: clean up
+                        name = section;
+                        color = colors[datasets.length];
+                    }
+                    let cellData = {
+                    'label': name,
+                    'data': xydata,
+                    'fill': false,
+                    "borderColor" :color,
+                    "lineTension" :0.1,
+                    "pointRadius": 0
+                    };
+                    datasets.push(cellData)
+                }
             }
-
-
-            // var primaryColor = getComputedStyle(document.documentElement)
-                                // .getPropertyValue('--primary');
-
 
             this.monitor = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: this.recording.t,
                     datasets: datasets,
-                    // datasets: [{
-                    //     label: yLabel,
-                    //     data: yData,
-                    //     fill: false,
-                    //     // borderColor:"rgb(75, 192, 192)",
-                    //     borderColor:primaryColor,
-                    //     lineTension:0.1
-                    // }],
-                    options: {
-                        maintainAspectRatio: false,
-                        scales: {
-                           yAxes: [{
-                             scaleLabel: {
-                               display: true,
-                               labelString: yLabel
-                             }
-                           }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                       yAxes: [{
+                         scaleLabel: {
+                           display: true,
+                           labelString: yLabel
+                         }
+                       }],
+                       xAxes: [{
+                         type: "linear",
+                         scaleLabel: {
+                           display: true,
+                           labelString: "Time (ms)"
+                         },
+                         ticks: {
+                            // stepSize: 1,
+                            precision: 0
                         }
+                       }]
+                    },
+                    tooltips: {
+                        callbacks: {
+                            label: function(tooltipItem, data) {
+                                var label = data.datasets[tooltipItem.datasetIndex].label || '';
+
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += Math.round(tooltipItem.yLabel * 100) / 100;
+                                return label;
+                            },
+                            title: function(tooltipItem, data) {
+                                tooltipItem = tooltipItem[0];
+                                label = Math.round(tooltipItem.xLabel * 100) / 100;
+                                label += "ms"
+                                return label;
+                            }
+                        }
+                    },
+                    legend: {
+                        labels: {
+                            filter: function(item, chart) {
+                                // Logic to remove a particular legend item goes here
+                                return !item.text.includes(':');
+                            },
+                            // generateLabels: function(chart) {
+                            //     let data = chart.data.datasets;
+                            //     console.log(data)
+                            //     let trimmed = data.map(function(x) {
+                            //         lab = x.label || ""
+                            //         if (lab.includes("soma")) {
+                            //             let colonIndex = lab.indexOf(":")
+                            //             return lab.slice(0, colonIndex)
+                            //         }
+                            //         else { return lab}
+                            //     })
+                            //     console.log(trimmed)
+                            //     return trimmed
+                            // }
+                            //     console.log("generating labels!")
+                            //     console.log("arg1", arg1)
+                            //     console.log("arg2", arg2)
+                            //     return arg1
+                            // }
+                        },
                     }
                 }
             });
@@ -516,7 +609,6 @@ var app = new Vue({
 
         addToast: function(title, subtitle="", message="", messages=Object(), level="info") {
             let gid = this.getMaxGid('toasts') + 1
-            console.log("messages: ", messages)
             let toast = {
                 'title': title,
                 'subtitle': subtitle,
@@ -539,7 +631,6 @@ var app = new Vue({
         },
 
         toastObj: function(message) {
-            console.log("toast: ", message)
             this.addToast(message.title, message.subtitle, message.message, message.messages, message.level);
         }
 
@@ -550,6 +641,7 @@ var app = new Vue({
         var response = $.get("/static/spyke/neuron-grey-prod.svg").then(function(xml) {
             app.svgData = xml.documentElement;
             app.addNeuron();
+            app.addStimulus('IClamp')
         });
 
         // Get saved files

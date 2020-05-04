@@ -6,6 +6,8 @@ Functions to return HTML and JSON data to clients
 
 import json
 import logging
+import traceback
+import sys
 
 from django.shortcuts import render
 from django.http import JsonResponse
@@ -13,7 +15,7 @@ from django.utils import timezone as tz
 
 from spyke.models import SimpleNeuron, Simulation
 from spyke.db import SimConfig
-from spyke.aux import Message, _decode
+from spyke.aux import Message, _decode, params2dict
 
 """
 Constants
@@ -54,6 +56,7 @@ def simulation(request):
             cells[gid] = cell
         except TypeError as e:
             logger.error("Error creating neuron: %s", e)
+            traceback.print_exc(file=sys.stdout)
             message.error.append(f"Error creating neuron: {e}")
 
     # Create stimuli
@@ -61,12 +64,22 @@ def simulation(request):
     logger.info("Creating stimuli")
     logger.debug("Stimuli: %s", stimuli)
     for stimulus in stimuli:
+
         try:
             cell_gid = stimulus.pop('neuron')
+
+            # remove extra keys from dict: not ideal solution...
+            stimulus.pop('title')
+            stimulus.pop('gid')
+            # convert param array to dict: again could move to frontend
+            stimulus['parameters'] = params2dict(stimulus['parameters'])
+
             cell = cells[cell_gid]
             cell.add_stimulus(**stimulus)
+
         except Exception as e:
             logger.error("Error creating stimulus: %s", e)
+            traceback.print_exc(file=sys.stdout)
             message.error.append(f"Error creating stimulus: {e}")
 
     # Run simulation
@@ -75,6 +88,7 @@ def simulation(request):
         sim = Simulation(cells)
     except Exception as e:
         logger.error("Error creating simulation: %s", e)
+        traceback.print_exc(file=sys.stdout)
         message.error.append(f"Error creating simulation: {e}")
 
     # Create Connections
@@ -90,12 +104,13 @@ def simulation(request):
         section = connection['section']
         loc = connection['loc']
         tau = connection['tau']
+        e = connection['e']
 
         if source_gid and target_gid:
             source = cells[source_gid]
             target = cells[target_gid]
             sim.add_connection(source, target, delay, weight, threshold,
-                               section, loc, tau)
+                               section, loc, tau, e)
         else:
             msg = "Invalid source or target in connection {}".format(
                            connection.get('gid', 'noGid'))
@@ -108,6 +123,7 @@ def simulation(request):
         out = sim.output
     except Exception as e:
         logger.error("Error running simulation: %s", e)
+        traceback.print_exc(file=sys.stdout)
         message.error.append(f"Error running simulation: {e}")
         out = {}
 

@@ -1,10 +1,155 @@
-const stimulus_default = {
-    delay:5,
-    dur: 1,
-    amp: 0.1,
-    neuron: 0,
-    section: 'dendrite-1',
-    loc: 0.5,
+function hexToRgb(hex) {
+  // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+  var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+  hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+    return r + r + g + g + b + b;
+  });
+
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
+
+function hexToRgba(hex, alpha) {
+    r = hexToRgb(hex);
+    return `rgba(${r.r},${r.g},${r.b},${alpha})`
+}
+
+const chartKey = {
+    'v': {'label': "Voltage",
+          'ylab': "Voltage (mV)",
+          'units': "mV"},
+    'ina': {'label': "<i class='fas fa-bolt'></i> Na<sup>+</sup>",
+          'ylab': "Sodium Current (mA)",
+          'units': "mA"},
+    'ik': {'label': "<i class='fas fa-bolt'></i> K<sup>+</sup>",
+          'ylab': "Potassium Current (mA)",
+          'units': "mA"},
+    'nai': {'label': "<i class='fas fa-flask'></i> Na<sup>+</sup>",
+          'ylab': "Sodium Concentration (milimolar)",
+          'units': "mM"},
+    'ki': {'label': "<i class='fas fa-flask'></i> K<sup>+</sup>",
+          'ylab': "Potassium Concentration (milimolar)",
+          'units': "mM"},
+    'cai': {'label': "<i class='fas fa-flask'></i> Ca<sup>2+</sup>",
+          'ylab': "Calcium Concentration (milimolar)",
+          'units': "mM"},
+    'ica': {'label': "<i class='fas fa-bolt'></i> Ca<sup>2+</sup>",
+          'ylab': "Calcium Current (mA)",
+          'units': "mA"},
+    'amp': {'label': "Amplitude",
+          'ylab': "Amplitude (mA)",
+          'units': "mA"},
+    'spikes': {'label': "Spikes",
+          'ylab': "Action potentials",
+          'units': ""},
+}
+
+
+function stimulusTemplate() {
+    let data = {
+        delay:5,
+        dur: 1,
+        amp: 0.1,
+        neuron: 1,
+        section: 'dendrite-1',
+        loc: 0.5,
+        stim_type: "IClamp"
+    }
+    return data
+}
+
+function stimuli() {
+    let data = [
+        {"name": "IClamp",
+         "stim_type": "IClamp",
+         "title": "Current Clamp",
+         "neuron": 1,
+         "section": "soma",
+         "loc": 0.5,
+         "parameters": 
+            [
+                {"name": "dur",
+                 "title": "Duration (ms)",
+                 "help": "Duration of stimulus",
+                 "value": 1,
+                 "step": 1},
+
+                 {"name": "delay",
+                 "title": "Delay (ms)",
+                 "help": "Time before stimulus onset",
+                 "value": 5,
+                 "step": 1},
+
+                 {"name": "amp",
+                 "title": "Amplitude (mA)",
+                 "help": "Current Amplitude",
+                 "value": 0.1,
+                 "step": 0.1}
+            ]
+        },
+
+        {"name": "ACClamp",
+         "stim_type": "ACClamp",
+         "title": "AC Clamp",
+         "neuron": 1,
+         "section": "soma",
+         "loc": 0.5,
+         "parameters": 
+            [
+                {"name": "dur",
+                 "title": "Duration (ms)",
+                 "help": "Duration of stimulus",
+                 "value": 100,
+                 "step": 1},
+
+                 {"name": "delay",
+                 "title": "Delay (ms)",
+                 "help": "Time before stimulus onset",
+                 "value": 5,
+                 "step": 1},
+
+                 {"name": "amp_min",
+                 "title": "Minimum Amplitude (mA)",
+                 "help": "Minimum Amplitude of alternating current",
+                 "value": -1,
+                 "step": 1},
+
+                 {"name": "amp_max",
+                 "title": "Maximum Amplitude (mA)",
+                 "help": "Maximum Amplitude of alternating current",
+                 "value": 1,
+                 "step": 1},
+
+                 {"name": "freq0",
+                 "title": "Initial Frequency (Hz)",
+                 "help": "Initial frequency of current alternation",
+                 "value": 100,
+                 "step": 1},
+
+                 {"name": "freq1",
+                 "title": "Target Frequency (Hz)",
+                 "help": "Frequency gradient from initial to target",
+                 "value": 100,
+                 "step": 1}
+            ]
+        }
+
+
+    ]
+    return data
+}
+
+function getStimulus(name, params = []) {
+    let stimulus = stimuli().filter(x=>x.name==name).pop()
+    for (var i=0; i < params.length; i++) {
+        stimulus.parameters[i] = params[i];
+    };
+    return stimulus
 }
 
 const connectionDefault = {
@@ -16,7 +161,8 @@ const connectionDefault = {
     loc: 0.5,
     weight: 0.05,
     threshold: 10,
-    tau: 2
+    tau: 2,
+    e: 0
 }
 
 const dendriteDefault = {
@@ -310,8 +456,6 @@ function dendriteTemplate() {
         gid: 1,
         L: 200,
         diam: 1,
-        // g: 0.001,
-        // e: -65,
         "channels": [
             getChannel('pas')
         ],
@@ -365,4 +509,37 @@ function neuronTemplate() {
                     }
                 }
         return neuron
+}
+
+
+// Bumped from https://gist.github.com/igodorogea/4f42a95ea31414c3a755a8b202676dfd
+
+function niceNum (range, round) {
+    var exponent = Math.floor(Math.log10(range));
+    var fraction = range / Math.pow(10, exponent);
+    var niceFraction;
+
+    if (round) {
+      if (fraction < 1.5) niceFraction = 1;
+      else if (fraction < 3) niceFraction = 2;
+      else if (fraction < 7) niceFraction = 5;
+      else niceFraction = 10;
+    } else {
+      if (fraction <= 1) niceFraction = 1;
+      else if (fraction <= 2) niceFraction = 2;
+      else if (fraction <= 5) niceFraction = 5;
+      else niceFraction = 10;
+    }
+
+    return niceFraction * Math.pow(10, exponent);
+  }
+
+function niceTicks(maxTick) {
+    var spacing = niceNum(maxTick / 9, true)
+    var steps = Math.ceil(maxTick / spacing)
+    var ticks = []
+    for (var i=0; i <= steps; i++) {
+        ticks.push(i * spacing)
+    }
+    return ticks
 }
