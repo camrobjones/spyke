@@ -1,96 +1,24 @@
 
-Multiple Neurons
-- ~~Params for multiple neurons~~
-- ~~Add Neuron~~
-- ~~Backend (run 2 neurons)~~
-- ~~Viz of 2 neurons~~
-- ~~x, y coords~~
-- ~~Attach stims to different neurons~~
+Lara notes
+----------
+- G-protei
 
-Connecting
-- ~~Connect 2 neurons~~
-- ~~Edit connection~~
-- ~~connection backend~~
+- Hyperpolarization .. cation current
+- H-current
 
-- visualize connection
-    - ~~draw connection~~
-    - ~~replace during drag~~
-    - ~~Fix conn centre~~
-    - ~~draw on create~~
+- Chloride ion
 
-- ~~Collapsible preview stimuli & con~~
+- Feed in spiking data
 
-- ~~add Dendrite~~
-- ~~remove Dendrite~~
-- 
-- ~~axon backend~~
-- ~~multi-dendrite backend~~
+- Response to feedback over time
 
-- ~~choose syn location for connections~~
+- Physiological properties of cells
 
-- ~~addNeuron offset~~
+- change defaults
 
-- ~~save simulation~~
-    - 03.26: v-for neurons
-    - 04.19: run notifications
-    - 05.46: saveload buttons
-    -----
-    - 07.47: saveload popups
-    - 08.43: load popup
-        - 08.52: get saved files
-    - 09.24: save button work
-    - 09.31: saveload notifications
-    - 10.12: Error handling
-    - 12.12
-
-- ~~Simulation running notifications~~
-
-- ~~Compute gids~~
-    - Minimize no. of data
-
-- ~~Simulation logging~~
-    - ~~Error handling~~
-
-- ~~Ion channels~~
-    - List available channels
-    - Add channel panel
-    - List available parameters
-        - (could manual & generate json on create)
-
-- ~~Cleanup backend~~
-    - ~~Section classes~~
-    - ~~axon backend~~
-    - ~~Rename "BallAndStick"~~
-
-- ~~Select & test 5 good basic ion channels~~
-
-- ~~Consolidate frontend~~
-    - ~~dendrite frontend!~~
-
-- ~~Synapses~~
-    - ~~Create connections from axon??~~
-    - ~~Voltage etc~~
-
-- AC current
-    - ~~backend params~~
-    - ~~frequency gradient~~
-    - ~~Handle float/zero oscillations~~
-    - ~~uncomment exception handling~~
-    - ~~try paper stuff~~
-
-- Recordings
-    - ~~Stimulus currents~~
-        - ~~Name stimuli~~
-    - ~~Ion concentrations~~
-    - ~~Ion currents~~
-    - ~~Voltage in other sections~~
-        - ~~Neurons all one color & label~~
-    - ~~chart ylabel~~
-    - ~~Get chart labels dynamically~~
-    - NC spikes
-    - ~~Spiking in general~~
-    - Cleanup chart function
-    
+Todo
+----
+- chart legend toggle other sections
 
 - Segment level
 
@@ -106,18 +34,16 @@ Connecting
     - How granular
 
 - Stims
-    - ~~Choose segment & section~~
-    - ~~Choose stimulus type~~
-    - ~~Alternating current~~
     - Step current
     - stimulus names (and preview)
     - Representation in minimap
 
 - Neurons
+    - Represent in canvas
+        - name
+        - color
+        - edit
     - pre-specified neurons
-    - ~~Multiple dendrites~~
-    - ~~edit axon~~
-    - ~~channel density~~
     - nseg
     - all dendrites as one
     - neurotransmitters
@@ -160,10 +86,14 @@ Views
 
 - Recording
     - Impedance
+        - https://www.neuron.yale.edu/phpBB/viewtopic.php?f=28&t=771
 
 - General
     - User accounts
     - localise dependencies
+    - Grants/funding
+        - Rapid
+        - Eager
 
 
 - expand/minimize monitor/config
@@ -199,26 +129,33 @@ My First Neuron
 
 Questions
 ---------
-- How to generate rhytmic behaviour in single neuron
-    - Increasing Na conductance seems to work
-    - Constant IClamp doesn't
 
-- How to simulate application of neurotransmitter
-    - 
-
-- Axon parameters
-    - any channels? Myelination?
+- Chloride channel
+    - Which one to use?
+    - Voltage gated..?
 
 - Synapses
     - Which to use for connections
     - One synapse per connection?
     - All synapses the same for source?
 
-- Papers
-    - How to implement Hutcheon & Yarom
+- Axon parameters
+    - any channels? Myelination?
+
+- How to simulate application of neurotransmitter
+    - GABAergic/ AMDA etc
 
 - sections
     - All equal? Privilege soma? Soma/axon/dendrites? Others?
+
+- Should viz show all segments? Mean or soma as opaque?
+
+- How to generate rhytmic behaviour in single neuron
+    - Increasing Na conductance seems to work
+    - Constant IClamp doesn't
+
+- Papers
+    - How to implement Hutcheon & Yarom
 
 
 ========

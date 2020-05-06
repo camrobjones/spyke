@@ -1,3 +1,21 @@
+var newLegendClickHandler = function(e, legendItem) {
+    var name = legendItem.text;
+    var neuron = app.neurons.filter(x=>x.name==name).pop()
+    var nsec = neuron.sections().length;
+
+    var ci = this.chart;
+    var index = legendItem.datasetIndex;
+    // Loop through neuron segments
+    for (var i=index; i<(index + nsec); i++){
+        var meta = ci.getDatasetMeta(i);
+        console.log(meta)
+        // See controller.isDatasetVisible comment
+        meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
+    }
+    // We hid a dataset ... rerender the chart
+    ci.update();
+}
+
 
 
 Vue.config.delimiters = ["[[", "]]"]
@@ -548,6 +566,7 @@ var app = new Vue({
                         }
                     },
                     legend: {
+                        onClick: newLegendClickHandler,
                         labels: {
                             filter: function(item, chart) {
                                 // Logic to remove a particular legend item goes here

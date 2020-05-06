@@ -475,10 +475,6 @@ function neuronTemplate() {
                     {
                         'L': 12,
                         'diam': 12,
-                        // 'gnabar': 0.12,
-                        // 'gkbar': 0.036,
-                        // 'gl': 0.0003,
-                        // 'el': -54.3,
                         "channels": [
                             getChannel('hh')
                         ],
@@ -491,8 +487,6 @@ function neuronTemplate() {
                 'axon': {
                     'L': 200,
                     'diam': 1,
-                    // 'g': 0.001,
-                    // 'e': -65,
                     "channels": [
                         getChannel('hh')
                     ],
@@ -506,8 +500,17 @@ function neuronTemplate() {
                 'synapse':
                     {
                         'tau': 2
+                    },
+                sections: function() {
+                    var sects = []
+                    sects.push(this.soma);
+                    sects.push(this.axon);
+                    for (dendrite of this.dendrites) {
+                        sects.push(dendrite)
                     }
+                    return sects
                 }
+            }
         return neuron
 }
 
