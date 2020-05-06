@@ -1,7 +1,7 @@
 var newLegendClickHandler = function(e, legendItem) {
     var name = legendItem.text;
     var neuron = app.neurons.filter(x=>x.name==name).pop()
-    var nsec = neuron.sections().length;
+    var nsec = app.getSections(neuron.gid).length;
 
     var ci = this.chart;
     var index = legendItem.datasetIndex;

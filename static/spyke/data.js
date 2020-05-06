@@ -500,16 +500,7 @@ function neuronTemplate() {
                 'synapse':
                     {
                         'tau': 2
-                    },
-                sections: function() {
-                    var sects = []
-                    sects.push(this.soma);
-                    sects.push(this.axon);
-                    for (dendrite of this.dendrites) {
-                        sects.push(dendrite)
                     }
-                    return sects
-                }
             }
         return neuron
 }
