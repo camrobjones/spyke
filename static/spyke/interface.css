@@ -829,8 +829,17 @@ body {
     overflow: hidden;
 }
 
+#editor-popup-params-container {
+    flex: 1 0 auto;
+    width: 300px;
+    margin-right: 10px;
+    padding: 0px;
+    overflow: hidden;
+}
+
 #editor-popup-body-container {
     flex: 0 1 100%;
+    overflow: scroll;
 }
 
 #editor-popup {
@@ -862,6 +871,14 @@ body {
     cursor:pointer;
 }
 
+#editor-popup-params {
+    padding: 0px;
+    display: flex;
+    justify-content: space-between;
+    height:100%;
+
+}
+
 #editor-sidebar-panel-1 {
     /*transition: flex 0.5s*/
 }
@@ -886,9 +903,9 @@ body {
 
 .editor-sidebar-item-container:hover {
     background: var(--darker);
-    background: var(--secondary);
-    color: var(--darker);
-    box-shadow: 0px 0px 2px 1px #ff8500a3;
+    /*background: var(--secondary);*/
+    /*color: var(--darker);*/
+    /*box-shadow: 0px 0px 2px 1px #ff8500a3;*/
     margin-left:0px;
     margin-right:0px;
 }

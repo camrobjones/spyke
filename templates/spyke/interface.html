@@ -910,10 +910,10 @@
 
                             <div class='editor-sidebar-panel' id='editor-sidebar-panel-1' :class="{ active : editor.primary == '' }">
 
-                                <div class='editor-sidebar-item-container' v-for='option in editorOptions' @click='editor.primary = option' :class="{active: editor.primary == option}">
+                                <div class='editor-sidebar-item-container' v-for='section in getSections(editor.neuron)' @click='editorSelect(section, $event)' :class="{active: editor.selection.includes(section)}">
 
                                     <div class='editor-sidebar-item'>
-                                        [[option]]
+                                        [[section]]
 
                                     </div>
 
@@ -921,20 +921,13 @@
 
                             </div>
 
-                             <transition name="expand">
-                                <div v-show='editor.primary' class='editor-sidebar-panel' id='editor-sidebar-panel-2'>
+                        </div>
+                    </div>
 
-                                    <div class='editor-sidebar-item-container' v-for='option in secondaryOptions' @click='editor.secondary = option'>
+                    <!-- Parameters -->
+                    <div id='editor-popup-params-container' class='popup-body-container editor-section'>
 
-                                        <div class='editor-sidebar-item'>
-                                            [[option]]
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-                            </transition>
+                        <div id='editor-popup-params' class='popup-body'>
 
                         </div>
                     </div>
@@ -953,7 +946,7 @@
                     <!-- End body -->
 
                 </div>
-                    <!-- End content -->
+                <!-- End content -->
 
             </div>
         </div>

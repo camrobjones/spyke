@@ -18,22 +18,39 @@ Lara notes
 
 Todo
 ----
-- chart legend toggle other sections
 
-- Segment level
+- fork dev
+
 
 - Neuron editor
+    - Param computed method 03.16-
+        - Geometry & Channel settings
+        - Neuron settings
+    - Param display
+    - Selection data
+    - Nseg
+        - Nseg parameters
+        - Take nseg params from parent
+    - Handle hierarchical params
+
+    - Propagate changes onchange to actual sections
+    - Save/Load buttons
+    - Neuron name
+
+    - Visual representation
+        - Match neuron data
+        - Select
+        - Create
 
 - Changing ion concentrations
 
 - Jo notes
 
-- Push & prepare examples
-
 - Ion channels
     - How granular
 
 - Stims
+    - Fix AC period algorithm
     - Step current
     - stimulus names (and preview)
     - Representation in minimap
@@ -130,6 +147,12 @@ My First Neuron
 Questions
 ---------
 
+Dendrites:
+    - Convention 1: d_1 for #n1
+    - Convention 2: 0a, 0b, 0c by radial
+        - children 0a_main_1a_ch
+            - children: 0a_main_1a_ch_2a_ch
+
 - Chloride channel
     - Which one to use?
     - Voltage gated..?
@@ -156,6 +179,11 @@ Questions
 
 - Papers
     - How to implement Hutcheon & Yarom
+
+For Lara
+--------
+- Grants and funding
+- Tutorials
 
 
 ========

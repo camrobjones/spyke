@@ -43,6 +43,9 @@ var app = new Vue({
         editor: {
             gid: 1, 
             primary: "",
+            neuron:{},
+            selection:[],
+            lastSelected:""
 
         },
         monitorTab: '',
@@ -125,26 +128,16 @@ var app = new Vue({
     },
     computed: {
         editorNeuron: function() {
-            let matches = this.neurons.filter(x=> x.gid == this.editor.gid)
-            return matches.pop() || {}
+            return this.getNeuron(this.editor.gid)
         },
 
-        secondaryOptions: function() {
-            let options = []
-            if ('soma' in this.editorNeuron) {
-                options.push('soma')
-            }
-            if ('axon' in this.editorNeuron) {
-                options.push('axon')
-            }
-            if ('dendrites' in this.editorNeuron) {
-                for (dendrite of this.editorNeuron.dendrites) {
-                    options.push('dendrite-' + dendrite.gid)
-                }
-                
-            }
-            return options;
+        editorSections: function() {
+            return this.getSections(this.editor.neuron)
         },
+
+        editorParams: function() {
+
+        }
 
         maxTime: function() {
              if ('t' in this.recording) {
@@ -180,13 +173,13 @@ var app = new Vue({
             return parseInt((time / this.maxTick) * 100) + "%"
         },
 
+        neuron: neuronTemplate,
+
         // Layout
 
         changeSettingsTab: function(tabname) {
             this.settingsTab = tabname;
         },
-
-        neuron: neuronTemplate,
 
         changeMonitorTab: function(tabname) {
             this.monitorTab = tabname;
@@ -196,6 +189,8 @@ var app = new Vue({
                 }  
             })
         },
+
+        // Add/Remove
 
         addStimulus: function(name) {
             let stim = getStimulus(name);
@@ -245,6 +240,61 @@ var app = new Vue({
         removeChannel: function(neuron, section, channel) {
             let sec = this.getSection(neuron.gid, section)
             sec.channels = sec.channels.filter(x=>x.name != channel)
+        },
+
+        // Neurons
+
+        editNeuron: function(neuronGid) {
+            this.closePopups();
+            this.popups.editor = true;
+            let neuron = this.getNeuron(neuronGid);
+            this.editor.neuron = neuronGid;
+        },
+
+        editClear: function(section=null) {
+            this.editor.selection = this.editor.selection.filter(x=>x==section)
+        },
+
+        editorToggle: function(section) {
+            let idx = this.editor.selection.indexOf(section);
+            if (idx >= 0) {
+                this.editor.selection.splice(idx, 1)
+            } else {
+                this.editor.selection.push(section)
+            }
+        },
+
+        editorSelectBetween(a, b) {
+            let indexA = this.editorSections.indexOf(a);
+            let indexB = this.editorSections.indexOf(b);
+            if (indexA < 0 || indexB < 0) {
+                console.log("Sections not found: ", a, b)
+                return false
+            }
+            // Ensure indexA smaller
+            if (indexB < indexA) {
+                [indexA, indexB] = [indexB, indexA];
+            }
+
+            for (var i=indexA; i<= indexB; i++) {
+                let sec = this.editorSections[i];
+                if (!this.editor.selection.includes(sec)) {
+                    this.editor.selection.push(sec)
+                }
+                
+            }
+        },
+
+        editorSelect: function(section, e) {
+            if (!(e.ctrlKey || e.metaKey)) {
+                this.editClear(section);
+            }
+            if (e.shiftKey) {
+                this.editorSelectBetween(section, this.editor.lastSelected)
+            } else {
+                this.editorToggle(section)
+            }
+            this.editor.lastSelected = section;
         },
 
         getNeuron: function(neuronGid) {
@@ -297,8 +347,6 @@ var app = new Vue({
             }
             return avail
         },
-
-        // Neurons
 
         addNeuron: function() {
             console.log('adding Neuron')
@@ -365,6 +413,8 @@ var app = new Vue({
                 this.neurons[i].y = parseInt(neuronElement.getAttribute('y'))
             }
         },
+
+        // Load and Save
 
         getSaved: function() {
             let url = '/spyke/get_saved'
@@ -938,5 +988,9 @@ window.onload = function() {
     makeDraggable();
     axonExtend();
     $('.toast').toast({autohide:false});
+    document.getElementById('editor-popup-sidebar-container')
+        .onselectstart = function() {
+        return false;
+    }
 }
 
