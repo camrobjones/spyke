@@ -40,6 +40,7 @@ def simulation(request):
     # Retrieve simulation parameters
     time = post.get('time', 25)
     potential = post.get('potential', -65)
+    celsius = post.get('celsius', 6.3)
 
     # Create neuron
     parameters = post['neurons']
@@ -54,17 +55,16 @@ def simulation(request):
             cell = SimpleNeuron(gid, x, y, 0, 0, neuron)
 
             cells[gid] = cell
-        except TypeError as e:
-            logger.error("Error creating neuron: %s", e)
+        except (TypeError, ValueError) as e:
+            logger.error("Error creating: %s", neuron['name'])
             traceback.print_exc(file=sys.stdout)
-            message.error.append(f"Error creating neuron: {e}")
+            message.error.append(f"Error creating {neuron['name']}: {e}")
 
     # Create stimuli
     stimuli = post.get('stimuli', [])
     logger.info("Creating stimuli")
-    logger.debug("Stimuli: %s", stimuli)
     for stimulus in stimuli:
-
+        logger.debug("Stimulus: %s", stimulus)
         try:
             cell_gid = stimulus.pop('neuron')
 
@@ -85,7 +85,7 @@ def simulation(request):
     # Run simulation
     logger.info("cells length: %s", len(cells))
     try:
-        sim = Simulation(cells)
+        sim = Simulation(cells, celsius)
     except Exception as e:
         logger.error("Error creating simulation: %s", e)
         traceback.print_exc(file=sys.stdout)
@@ -112,8 +112,8 @@ def simulation(request):
             sim.add_connection(source, target, delay, weight, threshold,
                                section, loc, tau, e)
         else:
-            msg = "Invalid source or target in connection {}".format(
-                           connection.get('gid', 'noGid'))
+            msg = "Invalid source or target in connection {}"
+            msg = msg.format(connection.get('gid', 'noGid'))
             logger.warning(msg)
             message.warning.append(f"Error creating connection: {msg}")
 
@@ -127,8 +127,8 @@ def simulation(request):
         message.error.append(f"Error running simulation: {e}")
         out = {}
 
-    t1 = tz.datetime.now()
-    tdelta = (t1 - t0).total_seconds()
+    t_1 = tz.datetime.now()
+    tdelta = (t_1 - t0).total_seconds()
 
     # Create message for user
     message.message = f'Simulation complete in {tdelta:.1g}s'

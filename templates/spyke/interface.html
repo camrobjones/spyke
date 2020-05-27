@@ -106,7 +106,7 @@
 
                         <div class='buffer'></div>
 
-                        <div class="form-group row sidebar-input-group" v-for='opt in simulationOptions'>
+                        <div class="form-group row sidebar-input-group" v-for='opt in labels.simulation'>
                             <div class='col-8'>
                                 <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
                                 <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
@@ -170,8 +170,8 @@
                                     </div>
                                     <div class='col-6'>
                                         <select class="form-control" id="stim-sec" v-model="stim.section">
-                                            <option v-for='sec in getSections(stim.neuron)' v-bind:value='sec'>
-                                                [[sec]]
+                                            <option v-for='sec in getSections(stim.neuron)' v-bind:value='sec.name'>
+                                                [[sec.name]]
                                             </option>
                                         </select>
                                     </div>
@@ -231,102 +231,55 @@
 
                     <div class='sidebar-section-content'>
 
-                        <div class='config-item-container' v-for='(neuron, index) in neurons'>
+                        <div class='config-item-container' v-for="(neuron, index) in neurons" :key="neuron.gid">
 
-                            <div class='config-item-header-container' onclick="toggleHideNext(this);">
-                                <h5 class='config-item-header'>
-                                Neuron [[neuron.gid]]
-                                </h5>
-                                
-                                <div class='config-item-header-delete-container' @click="removeNeuron(index)">
-                                    <i class="fas fa-times-circle close-icon" ></i>
-                                </div>
-
-                                <div class='config-item-header-options-container'>
-                                    <i class="fas fa-ellipsis-v"></i>
+                            <!-- Pop Menu -->
+                            <div class='pop-menu-container'>
+                                <div class='pop-menu'>
+                                    <div class="pop-menu-item" 
+                                          v-for="item in menus.nrn" 
+                                          @click="item.func()(neuron.gid);"
+                                          v-html="item.label">
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class='config-item-body-container collapse'>
-
-                                <!-- General -->
-                                <div class='sidebar-section-heading-container' onclick="toggleHideNext(this);">
-                                    <h4 class='sidebar-section-heading'>General</h4>
+                            <div class='config-item-header-container' onclick="toggleHideNext(this);" :id="'neuron-header-'+neuron.gid">
+                                <div class='config-item-header'>
+                                    <input type="text" class='neuron-name' v-model="neuron.name" @click.stop
+                                    :style="{width: neuronTextWidth(neuron.gid, 7.8, 30)}">
+                                    </input>
                                 </div>
 
-                                <div class='sidebar-section-body-container collapse'>
-
-                                    <div class="form-group row sidebar-input-group">
-                                        <div class='col-8'>
-                                            <label for="Ra" class='row sidebar-input-label'>Axial resistance</label>
-                                            <small id="RaHelp" class="form-text text-muted sidebar-input-help row">Ohm * cm</small>
-                                        </div>
-                                        <div class='col-4'>
-                                            <input type="number" class="form-control sidebar-input-number" id="Ra" v-model="neuron.general.Ra">
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group sidebar-input-group row">
-                                        <div class='col-8'>
-                                            <label class='row sidebar-input-label' for="cm">Membrane capacitance</label>
-                                            <small id="cmHelp" class="form-text text-muted sidebar-input-help row">Micro Farads / cm<sup>2</sup></small>
-                                        </div>
-                                        <div class='col-4'>
-                                            <input type="number" class="form-control sidebar-input-number" id="cm" v-model="neuron.general.cm">
-                                        </div>
-                                    </div>
-
-                                    <!-- <div class="form-group sidebar-input-group row">
-                                        <div class='col-8'>
-                                            <label class='row sidebar-input-label' for="syn-tau">Synapse Tau</label>
-                                            <small id="syn-tauHelp" class="form-text text-muted sidebar-input-help row">Decay time constant (ms)</small>
-                                        </div>
-                                        <div class='col-4'>
-                                            <input type="number" class="form-control sidebar-input-number" id="syn-tau" v-model="neuron.synapse.tau">
-                                        </div>
-                                    </div> -->
+                                <div class='neuron-color-container'>
+                                    <input type="color" class='neuron-color' v-model="neuron.color" @click.stop :style="{ background: neuron.color}">
+                                    </input>
                                 </div>
 
-                                <!-- Soma -->
-                                <div class='sidebar-section-heading-container' onclick="toggleHideNext(this);">
-                                    <h4 class='sidebar-section-heading'>Soma</h4>
+                                <div class='config-item-header-options-container' onclick="showMenu(event);">
+                                    <i class="fas fa-ellipsis-v"></i>
                                 </div>
 
-                                <div class='sidebar-section-body-container collapse'>
+                            </div>
 
-                                    <div class="form-group sidebar-input-group row">
-                                        <div class='col-8'>
-                                            <label class='row sidebar-input-label' for="soma-length">Length</label>
-                                            <small id="soma-lengthHelp" class="form-text text-muted sidebar-input-help row">Microns</small>
-                                        </div>
-                                        <div class='col-4'>
-                                            <input type="number" class="form-control sidebar-input-number" id="soma-length" v-model="neuron.soma.L">
+
+                            <div :id="'neuron-body-'+neuron.gid"
+                                 class='config-item-body-container collapse'>
+
+                                <!-- Sections -->
+                                <div v-for='(sec, secIndex) in neuron.sections'>
+
+                                    <div class='sidebar-section-heading-container' onclick="toggleHideNext(this);" :style="{ background: neuron.color + 66}">
+                                        <h4 class='sidebar-section-heading'>[[sec.name]]</h4>
+
+                                        <div class='sidebar-section-subheading-icon-container' @click="removeSection(neuron.gid, secIndex, $event)">
+                                            <i class="fas fa-times-circle close-icon" ></i>
                                         </div>
                                     </div>
 
-                                    <div class="form-group sidebar-input-group row">
-                                        <div class='col-8'>
-                                            <label class='row sidebar-input-label' for="soma-diam">Diameter</label>
-                                            <small id="soma-diamHelp" class="form-text text-muted sidebar-input-help row">Microns</small>
-                                        </div>
-                                        <div class='col-4'>
-                                            <input type="number" class="form-control sidebar-input-number" id="soma-diam" v-model="neuron.soma.diam">
-                                        </div>
-                                    </div>
-
-                                    <!-- Channels -->
-                                    <div class='sidebar-input-group-container' v-for='channel in neuron.soma.channels'>
-
-                                        <div class='sidebar-input-group-boundary'>
-                                        </div>
+                                    <div class='sidebar-section-body-container collapse'>
 
                                         <div class='sidebar-section-subheading-container'>
-
-                                            <h5 class='sidebar-section-subheading'> [[channel.title]]</h5>
-
-                                            <div class='sidebar-section-subheading-icon-container' @click="removeChannel(neuron, 'soma', channel.name)">
-                                                <i class="fas fa-times-circle close-icon" ></i>
-                                            </div>
 
                                             <div class='sidebar-section-subheading-icon-container'>
                                                 <!-- <i class="fas fa-chevron-down"></i> -->
@@ -334,146 +287,72 @@
 
                                         </div>
 
-                                        <div class="form-group row sidebar-input-group" v-for='param in channel.parameters'>
-                                            <div class='col-7'>
-                                                <label v-bind:for="param.name" class='row sidebar-input-label'>[[param.title]]</label>
-                                                <small v-bind:id="param.name + 'Help'" class="form-text text-muted sidebar-input-help row" v-html="param.help"></small>
+                                        <h5 class='sidebar-section-subheading'>Parent</h5>
+
+                                        <div class="form-group row sidebar-input-group">
+                                            <div class='col-6'>
+                                                <label class='row sidebar-input-label' for="section-parent">Parent Section</label>
+                                                <small id="section-parent-help" class="form-text text-muted sidebar-input-help row">Parent of Section</small>
                                             </div>
-                                            <div class='col-5'>
-                                                <input type="number" class="form-control sidebar-input-number" v-bind:step="param.step" v-bind:id="param.name" v-model="param.value">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class='sidebar-input-group-boundary'>
-                                    </div>
-
-                                    <div class="form-group row sidebar-input-group">
-                                        <div class='col-8'>
-                                            <select class="form-control" id="newChannel" v-model="neuron['soma'].data.selectedChannel">
-                                                <option v-for="channel in availableChannels(neuron.gid, 'soma')" v-bind:value='channel.name'>
-                                                    [[channel.title]]
-                                                </option>
-                                            </select>
-                                        </div>
-                                        <div class='col-4'>
-                                            <button class='addChannel btn' @click="addChannel(neuron, 'soma')">+
-                                            </button>
-                                        </div>
-                                    </div>
-
-
-                                </div>
-
-                                <!-- Axon -->
-                                <div class='sidebar-section-heading-container' onclick="toggleHideNext(this);">
-                                    <h4 class='sidebar-section-heading'>Axon</h4>
-                                </div>
-
-                                <div class='sidebar-section-body-container collapse'>
-
-                                    <div class="form-group row sidebar-input-group" v-for='opt in sectionOptions'>
-                                        <div class='col-7'>
-                                            <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
-                                            <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
-                                        </div>
-                                        <div class='col-5'>
-                                            <input type="number" class="form-control sidebar-input-number" v-bind:step="opt.step" v-bind:id="opt.attribute" v-model="neuron.axon[opt.attribute]">
-                                        </div>
-                                    </div>
-
-                                    <!-- Channels -->
-                                    <div class='sidebar-input-group-container' v-for='channel in neuron.axon.channels'>
-
-                                        <div class='sidebar-input-group-boundary'>
-                                        </div>
-
-                                        <div class='sidebar-section-subheading-container'>
-
-                                            <h5 class='sidebar-section-subheading'> [[channel.title]]</h5>
-
-                                            <div class='sidebar-section-subheading-icon-container' @click="removeChannel(neuron, 'axon', channel.name)">
-                                                <i class="fas fa-times-circle close-icon" ></i>
-                                            </div>
-
-                                            <div class='sidebar-section-subheading-icon-container'>
-                                                <!-- <i class="fas fa-chevron-down"></i> -->
-                                            </div>
-
-                                        </div>
-
-                                        <div class="form-group row sidebar-input-group" v-for='param in channel.parameters'>
-                                            <div class='col-7'>
-                                                <label v-bind:for="param.name" class='row sidebar-input-label'>[[param.title]]</label>
-                                                <small v-bind:id="param.name + 'Help'" class="form-text text-muted sidebar-input-help row" v-html="param.help"></small>
-                                            </div>
-                                            <div class='col-5'>
-                                                <input type="number" class="form-control sidebar-input-number" v-bind:step="param.step" v-bind:id="param.name" v-model="param.value">
+                                            <div class='col-6'>
+                                                <select class="form-control" id="section-parent" v-model="sec.parent">
+                                                    <option :value="null">
+                                                     None
+                                                    </option>
+                                                    <option v-for='osec in getSections(neuron.gid)' v-bind:value='osec.gid' v-if='osec.gid != sec.gid'>
+                                                     [[osec.name]]
+                                                    </option>
+                                                </select>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div class="form-group row sidebar-input-group">
-                                        <div class='col-8'>
-                                            <select class="form-control" id="newChannel" v-model="neuron['axon'].data.selectedChannel">
-                                                <option v-for="channel in availableChannels(neuron.gid, 'axon')" v-bind:value='channel.name'>
-                                                    [[channel.title]]
-                                                </option>
-                                            </select>
-                                        </div>
-                                        <div class='col-4'>
-                                            <button class='addChannel btn' @click="addChannel(neuron, 'axon')">+
-                                            </button>
-                                        </div>
-                                    </div>
+                                        <h5 class='sidebar-section-subheading'>Geometry</h5>
 
-
-                                </div>
-
-                                <!-- Dendrite -->
-                                <div class='sidebar-section-heading-container' onclick="toggleHideNext(this);">
-                                    <h4 class='sidebar-section-heading'>Dendrites</h4>
-                                </div>
-
-                                <div class='sidebar-section-body-container collapse'>
-
-                                    <div v-for='(dend, dendriteIndex) in neuron.dendrites'>
-
-                                        <div class='sidebar-section-subheading-container'>
-
-                                            <h5 class='sidebar-section-subheading'>Dendrite [[dend.gid]]</h5>
-
-                                            <div class='sidebar-section-subheading-icon-container' @click="removeDendrite(neuron.gid, dendriteIndex)">
-                                                <i class="fas fa-times-circle close-icon" ></i>
-                                            </div>
-
-                                            <div class='sidebar-section-subheading-icon-container'>
-                                                <!-- <i class="fas fa-chevron-down"></i> -->
-                                            </div>
-
-                                        </div>
-
-                                        <div class="form-group row sidebar-input-group" v-for='opt in sectionOptions'>
+                                        <div class="form-group row sidebar-input-group" v-for='opt in labels.geometry'>
                                             <div class='col-7'>
                                                 <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
                                                 <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
                                             </div>
                                             <div class='col-5'>
-                                                <input type="number" class="form-control sidebar-input-number" v-bind:step="opt.step" v-bind:id="opt.attribute" v-model="dend[opt.attribute]">
+                                                <input type="number" class="form-control sidebar-input-number" v-bind:step="opt.step" v-bind:id="opt.attribute" v-model.number="sec.geometry[opt.attribute]" @change="updateSec(sec, 'geometry', opt.attribute, $event)">
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group row sidebar-input-group">
+                                            <div class='col-7'>
+                                                <label for="nseg" class='row sidebar-input-label'>No. Segments</label>
+                                                <small id="nseg + 'Help'" class="form-text text-muted sidebar-input-help row">Number of Segments</small>
+                                            </div>
+                                            <div class='col-5'>
+                                                <input type="number" class="form-control sidebar-input-number" v-model="sec._geometry['nseg']" @change="sec.updateSegments()"
+                                                step=1>
+                                            </div>
+                                        </div>
+
+                                        <h5 class='sidebar-section-subheading'>Biophysics</h5>
+
+                                        <div class="form-group row sidebar-input-group" v-for='opt in labels.biophysics'>
+                                            <div class='col-7'>
+                                                <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
+                                                <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row" v-html="opt.helptext"></small>
+                                            </div>
+                                            <div class='col-5'>
+                                                <input type="number" class="form-control sidebar-input-number" v-bind:step="opt.step" v-bind:id="opt.attribute" v-model.number="sec.biophysics[opt.attribute]" @change="updateSec(sec, 'biophysics', opt.attribute, $event)">
                                             </div>
                                         </div>
 
                                         <!-- Channels -->
-                                        <div class='sidebar-input-group-container' v-for='channel in dend.channels'>
+                                        <div class='sidebar-input-group-container' v-for='(channel, channelName) in sec.channels'>
 
                                             <div class='sidebar-input-group-boundary'>
                                             </div>
 
                                             <div class='sidebar-section-subheading-container'>
 
-                                                <h5 class='sidebar-section-subheading'> [[channel.title]]</h5>
+                                                <h5 class='sidebar-section-subheading'> [[channel.data('title')]]</h5>
 
-                                                <div class='sidebar-section-subheading-icon-container' @click="removeChannel(neuron, 'dendrite-'+dend.gid, channel.name)">
+                                                <div class='sidebar-section-subheading-icon-container' 
+                                                     @click="removeChannel(neuron, sec.name, channelName)">
                                                     <i class="fas fa-times-circle close-icon" ></i>
                                                 </div>
 
@@ -483,36 +362,39 @@
 
                                             </div>
 
-                                            <div class="form-group row sidebar-input-group" v-for='param in channel.parameters'>
+                                            <div class="form-group row sidebar-input-group" v-for='(val, param) in channel' v-if="param != 'data'">
                                                 <div class='col-7'>
-                                                    <label v-bind:for="param.name" class='row sidebar-input-label'>[[param.title]]</label>
-                                                    <small v-bind:id="param.name + 'Help'" class="form-text text-muted sidebar-input-help row" v-html="param.help"></small>
+                                                    <label v-bind:for="param" class='row sidebar-input-label'>[[channel.data('title', param)]]</label>
+                                                    <small v-bind:id="param + 'Help'" class="form-text text-muted sidebar-input-help row" v-html="channel.data('help', param)"></small>
                                                 </div>
                                                 <div class='col-5'>
-                                                    <input type="number" class="form-control sidebar-input-number" v-bind:step="param.step" v-bind:id="param.name" v-model="param.value">
+                                                    <input type="number" class="form-control sidebar-input-number" v-bind:step="channel.data('step', param)" v-bind:id="param" v-model="channel[param]"
+                                                    @change="updateSec(sec, 'channels.' +channelName, param, $event)">
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div class="form-group row sidebar-input-group">
                                             <div class='col-8'>
-                                                <select class="form-control" id="newChannel" v-model="dend.data.selectedChannel">
-                                                    <option v-for="channel in availableChannels(neuron.gid, 'dendrite-'+dend.gid)" v-bind:value='channel.name'>
+                                                <select class="form-control" :id="neuron.gid + '-' + sec.name + '-newChannel'">
+                                                    <option v-for="channel in availableChannels(neuron.gid, sec.name)" v-bind:value='channel.name'>
                                                         [[channel.title]]
                                                     </option>
                                                 </select>
                                             </div>
                                             <div class='col-4'>
-                                                <button class='addChannel btn' @click="addChannel(neuron, 'dendrite-'+dend.gid)">+
+                                                <button class='addChannel btn' @click="addChannel(neuron, sec.name)">+
                                                 </button>
                                             </div>
                                         </div>
 
                                     </div>
                                     
-                                    <div class='sidebar-section-body-footer'>
-                                        <a id='addSection' @click='addDendrite(index)'>Add Dendrite</a>
-                                    </div>
+                                </div>
+
+                                <!-- New Section -->
+                                <div class='sidebar-section-body-footer'>
+                                    <a id='addSection' @click='addSection(neuron.gid)' :style="{ color: neuron.color}">Add Section</a>
                                 </div>
                             </div>
                             <!-- Neuron Body container -->
@@ -521,7 +403,7 @@
 
                         <div class='new-config-item-container'>
 
-                            <button class='new-config-item btn' @click='addNeuron'>
+                            <button class='new-config-item btn' @click='addNeuron()'>
                                 +
                             </button>
 
@@ -594,8 +476,8 @@
                                     </div>
                                     <div class='col-6'>
                                         <select class="form-control" id="con-sec" v-model="connection.section">
-                                            <option v-for='sec in getSections(connection.target)' v-bind:value='sec'>
-                                                [[sec]]
+                                            <option v-for='sec in getSections(connection.target)' v-bind:value='sec.gid'>
+                                                [[sec.name]]
                                             </option>
                                         </select>
                                     </div>
@@ -611,7 +493,7 @@
                                     </div>
                                 </div>
 
-                                <div class="form-group row sidebar-input-group" v-for='opt in connectionOptions'>
+                                <div class="form-group row sidebar-input-group" v-for='opt in labels.connections'>
                                     <div class='col-7'>
                                         <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
                                         <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
@@ -667,13 +549,22 @@
 
                         <g id='svg-canvas-inner'>
 
-                            <circle id='point-circle' cx="0px" cy="0px" r="5px"></circle>
-
                             <line x1="-5000" x2="5000" y1="0" y2="0" stroke='#cccccccc' stroke-width="1"></line>
 
                             <line y1="-5000" y2="5000" x1="0" x2="0" stroke='#cccccccc' stroke-width="1"></line>
 
                             <svg v-for='neuron in neurons' v-bind:x='neuron.x' v-bind:y='neuron.y' v-html='svgData.innerHTML' width="150px" height="150px" v-bind:id="'neuron-' + neuron.gid" class='neuron-container' viewBox="0 0 26.458332 26.458334">
+
+                            </svg>
+
+                            <svg v-for='neuron in neurons' v-bind:x='neuron.x' v-bind:y='neuron.y'>
+                                <g>
+                                    <rect  x="80px" y="0px" :width="neuronTextWidth(neuron.gid)" height="20px" rx="10px" ry="10px" :style="{fill : neuron.color}" class="neuron-pill" @click="selectNeuron(neuron.gid)"/>
+                                    <text x="90px" y="14px" class='neuron-pill-text' :id="'neuron-text-' + neuron.gid" >[[neuron.name]]</text>
+                                </g>
+                            </svg>
+
+
 
                             <!-- <circle cx="100px" cy="100px" r="5px" id='point'></circle> -->
 
@@ -729,6 +620,10 @@
 
                         </div>
 
+                        <div id="monitor-nav-settings-container" @click="monitorPopup">
+                            <i class="fas fa-cog"></i>
+                        </div>
+
                     </div>
 
                     <div v-if="monitorTab == 'spikes'" id='spike-container'>
@@ -748,7 +643,7 @@
                             <div class='col' id='spike-main-container'>
 
                                 <div v-for="(secs, neuron, idx) in recording.views.spikes" class='row spike-row'>
-                                        <div class='spike-row-data' v-for="spike in secs.soma" :style="{left: getTimeProp(spike), color: colors[idx]}"><span>|</span>
+                                        <div class='spike-row-data' v-for="spike in secs.Soma" :style="{left: getTimeProp(spike), color: colors[idx]}"><span>|</span>
                                             <div class='spike-tooltip'>
                                                 [[Math.round(spike)]]ms
                                             </div>
@@ -888,6 +783,116 @@
         </div>
         <!-- End Load Popup -->
 
+        <!-- Viz Popup -->
+        <div id='viz-popup-container' class='popup-container' v-if="popups.monitor">
+            
+            <div id='viz-popup' class='popup'>
+
+                <!-- Header -->
+                <div id='viz-popup-header-container' class='popup-header-container'>
+                    <h5 id='viz-popup-header' class='popup-header'>Monitor Settings
+                    </h5>
+
+                    <div class='popup-close-container' @click="closePopups">
+                        <i class="fas fa-times"></i>
+                    </div>
+                </div>
+
+                <!-- Body -->
+                <div id='viz-popup-body-container' class='popup-body-container'>
+
+                    <div id='viz-popup-body' class='popup-body'>
+
+                        <div id='visible-select-container'>
+
+                            <div class='viz-title'>
+                                Neurons
+                            </div>
+
+                            <div id='viz-settings-neurons-container'>
+
+                                <div class='viz-settings-neuron-container' v-for='neuron in neurons'>
+                                    <div class='viz-settings-neuron' onclick="toggleHideNext(this);">
+                                        <div class='viz-settings-neuron-title'>
+                                            [[neuron.name]]
+                                        </div>
+                                        <div class='viz-settings-neuron-expand'>
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
+                                    </div>
+
+                                    <div class='viz-settings-sections-container'>
+                                        <div class='viz-settings-section'
+                                              v-for='section in neuron.sections'>
+                                            <label class='viz-label' 
+                                                   :for="neuron.name + '_' + section.name">[[section.name]]</label>
+                                            <input type="checkbox" 
+                                                    :id="neuron.name + '_' + section.name" 
+                                                    :value="neuron.name + '_' + section.name" 
+                                                    v-model="monitor.visible">
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                            
+
+                        </div>
+
+                        <div id='viz-settings-container'>
+
+                            <div class='viz-title'>
+                                Settings
+                            </div>
+
+                            <div class='viz-settings-group' v-for="(axis, lab) in monitor.axes">
+
+                                <div class='viz-settings-group-title'>
+                                    [[axis.title]]
+                                </div>
+
+                                <div class='viz-settings-row'>
+
+                                    <label class='viz-label'>Lock axis</label>
+
+                                    <input type='checkbox' v-model="axis.lock">
+
+                                </div>
+
+                                <div class='viz-settings-row'>
+
+                                    <label class='viz-label'>Minimum</label>
+
+                                    <input type='number' class='axis-input' v-model.number="axis.min" :disabled="!axis.lock">
+
+                                </div>
+
+                                <div class='viz-settings-row'>
+
+                                    <label class='viz-label'>Maximum</label>
+
+                                    <input type='number' class='axis-input'  v-model.number="axis.max" :disabled="!axis.lock">
+
+                                </div>
+
+
+                            </div>
+
+                            <button type='button' id="viz-confirm" class='btn popup-button save' @click='monitorApplySettings'>Confirm</button>
+
+
+                        </div>
+                        
+
+                    </div>
+
+
+                </div>
+
+            </div>
+        </div>
+        <!-- End Viz Popup -->
+
         <!-- Neuron editor Popup -->
         <div id='editor-popup-container' class='popup-container' v-show='popups.editor'>
             
@@ -897,6 +902,10 @@
                 <div id='editor-popup-header-container' class='popup-header-container'>
                     <h5 id='editor-popup-header' class='popup-header'>Neuron Editor
                     </h5>
+
+                    <div class='popup-close-container' @click="closePopups">
+                        <i class="fas fa-times"></i>
+                    </div>
                 </div>
 
                 <!-- Content -->
@@ -910,10 +919,101 @@
 
                             <div class='editor-sidebar-panel' id='editor-sidebar-panel-1' :class="{ active : editor.primary == '' }">
 
-                                <div class='editor-sidebar-item-container' v-for='section in getSections(editor.neuron)' @click='editorSelect(section, $event)' :class="{active: editor.selection.includes(section)}">
+                                <!-- Section -->
+                                <div class='editor-sidebar-section-outer' v-for='section in getSections(editor.neuron)'>
 
-                                    <div class='editor-sidebar-item'>
-                                        [[section]]
+                                    <div class='editor-sidebar-item-container'  @click='editorSelect(section, $event)' :class="{active: editor.selection.includes(section)}">
+
+                                        <div class='editor-sidebar-item'>
+                                            [[section.name]]
+
+                                        </div>
+
+                                        <div class='editor-sidebar-item-icon-container' :data-target="'editor-segment-outer-' + section.gid" onclick="ToggleShowHide(this, event)">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
+
+                                    </div>
+
+                                    <!-- Segment -->
+                                    <div class='editor-sidebar-segment-outer' :id="'editor-segment-outer-' + section.gid">
+                                        <div class='editor-sidebar-item-container' v-for='(segment, segIdx) in section.segments' @click='editorSelect(segment, $event)' :class="{active: editor.selection.includes(segment) || editor.selection.includes(section)}">
+
+                                            <div class='editor-sidebar-item'>
+                                                Segment [[segIdx + 1]]
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <!-- Add section -->
+                                <div class='editor-sidebar-section-outer' id='add-section-outer'>
+
+                                    <div class='editor-sidebar-item-container' 
+                                         id='add-section-container'
+                                         data-target="editor-new-section"
+                                         onclick="ToggleShowHide(this, event)">
+
+                                        <div class='editor-sidebar-item'>
+                                            Add Section
+
+                                        </div>
+
+                                        <div class='editor-sidebar-item-icon-container' 
+                                             data-target="editor-new-section">
+                                            <i class="fas fa-plus"></i>
+                                        </div>
+
+                                    </div>
+
+                                    <div class='editor-sidebar-segment-outer' id="editor-new-section">
+                                        <div class='form-row editor-param-section-body-container'>
+                                            
+                                            <div class="form-group col-12 editor-input-group">
+                                                <div class='editor-input-row'>
+
+                                                    <label for="editor-add-section-parent" class='editor-input-label'> Parent</label>
+                                                    <select class="editor-input" id="editor-add-section-parent" 
+                                                            v-model="editor.newSection.parent"
+                                                            @change="editorUpdateSection">
+                                                        <option :value="null">
+                                                         None
+                                                        </option>
+                                                        <option v-for='osec in getSections(editor.neuron)' 
+                                                                v-bind:value='osec.gid'>
+                                                            [[osec.name]]
+                                                        </option>
+                                                    </select>
+
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group col-12 editor-input-group">
+                                                <div class='editor-input-row'>
+                                                        <label for="editor-add-section-name" 
+                                                               class='editor-input-label'>
+                                                           Name
+                                                       </label>
+                                                        <input type="text" class=" editor-input text" 
+                                                        id="editor-add-section-name" v-model="editor.newSection.name">
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group col-12 editor-input-group">
+                                                <div class='editor-input-row'>
+
+                                                    <button class='addChannel btn' id='editor-add-section-button'
+                                                            @click='addSection(editor.neuron, editor.newSection.name, editor.newSection.parent); editorClearNewSection()'>
+                                                        Add
+                                                    </button>
+
+                                                </div>
+                                            </div>
+
+                                        </div>
 
                                     </div>
 
@@ -928,6 +1028,226 @@
                     <div id='editor-popup-params-container' class='popup-body-container editor-section'>
 
                         <div id='editor-popup-params' class='popup-body'>
+
+                            <!-- General -->
+
+                            <div class='editor-param-section' v-if="'general' in editorParams">
+
+                                <!-- Header -->
+                                <div class='editor-param-section-header-container'>
+                                    <h5 class='editor-param-section-header'>
+                                        General
+                                    </h5>
+                                </div>
+                                
+                                <div class='form-row editor-param-section-body-container'>
+                                    <div class="form-group col-12 editor-input-group" v-if="'name' in editorParams.general">
+                                        <div class='editor-input-row'>
+                                                <label for="name" class='editor-input-label'>Name</label>
+                                                <input type="text" class=" editor-input text" 
+                                                id="name" v-model="editorSection.name">
+                                                <div class='info-container'>
+                                                    <i class="fas fa-info"></i>
+                                                </div>
+                                                <div class='info-popup-container'>
+                                                    <div class='info-popup'>
+                                                        <b>Name:</b> 
+                                                        <span>Name of the Neuron</span>
+                                                    </div>
+                                                </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group col-12 editor-input-group" v-if="'parent' in editorParams.general">
+                                        <div class='editor-input-row'>
+                                                <label for="parent" class='editor-input-label'> Parent</label>
+                                                <select class="editor-input" id="section-parent" v-model="editorSection.parent">
+                                                    <option :value="null">
+                                                     None
+                                                    </option>
+                                                    <option v-for='osec in getSections(editor.neuron)' v-bind:value='osec.gid' v-if='osec.gid != editorSection.gid'>
+                                                     [[osec.name]]
+                                                    </option>
+                                                </select>
+
+                                                <div class='info-container'>
+                                                    <i class="fas fa-info"></i>
+                                                </div>
+                                                <div class='info-popup-container'>
+                                                    <div class='info-popup'>
+                                                        <b>Parent Section:</b> <span>Section which this section will be attached to</span>
+                                                    </div>
+                                                </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Geometry -->
+
+                            <div class='editor-param-section' v-if="'geometry' in editorParams">
+
+                                <!-- Header -->
+                                <div class='editor-param-section-header-container'>
+                                    <h5 class='editor-param-section-header'>
+                                        Geometry
+                                    </h5>
+                                </div>
+                                
+                                <div class='form-row editor-param-section-body-container'>
+                                    <div class="form-group col-md-6 editor-input-group" v-for='opt in labels.geometry' v-if='opt.attribute in editorParams.geometry'>
+                                        <div class='editor-input-row'>
+                                                <label v-bind:for="opt.attribute" class='editor-input-label'>[[opt.label]]</label>
+                                                <input type="number" class=" editor-input number" 
+                                                       v-bind:step="opt.step" v-bind:id="opt.attribute" 
+                                                       v-model="editorParams.geometry[opt.attribute]" 
+                                                       v-on:change="editorChange('geometry', opt.attribute, $event)">
+                                                <div class='info-container'>
+                                                    <i class="fas fa-info"></i>
+                                                </div>
+                                                <div class='info-popup-container'>
+                                                    <div class='info-popup'>
+                                                        <b>[[opt.label]]:</b> 
+                                                        <span v-html="opt.helptext">
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group col-md-6 editor-input-group" v-if="'nseg' in editorParams.geometry">
+                                        <div class='editor-input-row'>
+                                                <label for="nseg" class='editor-input-label'> Segments</label>
+                                                <input type="number" class=" editor-input number" step="1" id="nseg" 
+                                                       v-model="editorParams.geometry.nseg" 
+                                                       @change="updateEditorSegments($event)">
+
+                                                <div class='info-container'>
+                                                    <i class="fas fa-info"></i>
+                                                </div>
+                                                <div class='info-popup-container'>
+                                                    <div class='info-popup'>
+                                                        <b>No. Segments:</b> <span>Number of segments in section</span>
+                                                    </div>
+                                                </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Biophysics -->
+
+                            <div class='editor-param-section' v-if="'biophysics' in editorParams">
+
+                                <!-- Header -->
+                                <div class='editor-param-section-header-container'>
+                                    <h5 class='editor-param-section-header'>
+                                        Biophysics
+                                    </h5>
+                                </div>
+                                
+                                <div class='form-row editor-param-section-body-container'>
+                                    <div class="form-group col-md-6 editor-input-group" v-for='opt in labels.biophysics' v-if='opt.attribute in editorParams.biophysics'>
+                                        <div class='editor-input-row'>
+                                                <label v-bind:for="opt.attribute" class='editor-input-label'>[[opt.label]]</label>
+                                                <input type="number" class=" editor-input number" v-bind:step="opt.step" v-bind:id="opt.attribute" v-model="editorParams.biophysics[opt.attribute]" v-on:change="editorChange('biophysics', opt.attribute, $event)">
+                                                <div class='info-container'>
+                                                    <i class="fas fa-info"></i>
+                                                </div>
+                                                <div class='info-popup-container'>
+                                                    <div class='info-popup'>
+                                                        <b>[[opt.label]]:</b> 
+                                                        <span v-html="opt.helptext">
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <!-- Channels -->
+
+                            <div class='editor-param-section' v-if="'channels' in editorParams">
+
+                                <!-- Header -->
+                                <div class='editor-param-section-header-container'>
+                                    <h5 class='editor-param-section-header'>
+                                        Channels
+                                    </h5>
+                                </div>
+
+                                <div class='sidebar-input-group-container'
+                                     v-for='(channel, channelName) in editorParams.channels'>
+
+                                    <div class='editor-param-subheading-container'>
+
+                                        <h5 class='editor-section-subheading'>[[channel.data('title')]]</h5>
+
+                                        <div class='sidebar-section-subheading-icon-container' 
+                                             v-if="editorSectionFlag"
+                                             @click="editorRemoveChannel(channelName)">
+                                            <i class="fas fa-times-circle close-icon" ></i>
+                                        </div>
+
+                                    </div>
+
+                                    <div class='form-row editor-param-section-body-container'>
+                                        <div class="form-group col-md-6 editor-input-group" 
+                                             v-for='(val, param) in channel' v-if="param != 'data'">
+                                            <div class='editor-input-row'>
+                                                    <label v-bind:for="param" class='editor-input-label'>
+                                                        [[channel.data('title', param)]]
+                                                    </label>
+                                                    <input type="number" class="editor-input number" 
+                                                           v-bind:step="channel.data('step', param)" 
+                                                           v-bind:id="param" v-model="channel[param]" 
+                                                           v-on:change="editorChange('channels.'+channelName, param, $event)">
+                                                    <div class='info-container'>
+                                                        <i class="fas fa-info"></i>
+                                                    </div>
+                                                    <div class='info-popup-container'>
+                                                        <div class='info-popup'>
+                                                            <b>[[channel.data('title', param)]]:</b> 
+                                                            <span v-html="channel.data('help', param)">
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Add channel -->
+                                <div class='form-row editor-param-section-body-container'>
+                                    <div class="form-group col-12 editor-input-group">
+                                        <div id="add-channel-row" class='editor-input-row'>
+
+                                            <div id='add-channel-left'>
+
+                                                <h5 class='editor-section-subheading' id='add-channel-header'>
+                                                    Add a Channel
+                                                </h5>
+
+                                                <select id="editor-add-channel-select" class="editor-input" 
+                                                        v-model="editor.selectedChannel">
+                                                    <option v-for="channel in editorAvailableChannels" 
+                                                            v-bind:value='channel.name'>
+                                                        [[channel.title]]
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <button id="editor-add-channel-btn" class='new-config-item btn' 
+                                                    @click="editorAddChannel()">+
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                         </div>
                     </div>
@@ -987,6 +1307,8 @@
 </template>
 
 <script src="{% static 'spyke/data.js' %}"> </script>
+
+<script src="{% static 'spyke/aux.js' %}"> </script>
 
 <script src="{% static 'spyke/interface.js' %}"> </script>
 

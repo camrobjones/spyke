@@ -1,24 +1,5 @@
-var newLegendClickHandler = function(e, legendItem) {
-    var name = legendItem.text;
-    var neuron = app.neurons.filter(x=>x.name==name).pop()
-    var nsec = app.getSections(neuron.gid).length;
 
-    var ci = this.chart;
-    var index = legendItem.datasetIndex;
-    // Loop through neuron segments
-    for (var i=index; i<(index + nsec); i++){
-        var meta = ci.getDatasetMeta(i);
-        console.log(meta)
-        // See controller.isDatasetVisible comment
-        meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
-    }
-    // We hid a dataset ... rerender the chart
-    ci.update();
-}
-
-
-
-Vue.config.delimiters = ["[[", "]]"]
+Vue.config.delimiters = ["[[", "]]"];
 
 var app = new Vue({
     el: '#app',
@@ -33,6 +14,7 @@ var app = new Vue({
             save: false,
             load: false,
             editor: false,
+            monitor: false,
         },
         load: {
             selected: "",
@@ -45,77 +27,49 @@ var app = new Vue({
             primary: "",
             neuron:{},
             selection:[],
-            lastSelected:""
+            lastSelected:"",
+            selectedChannel:"",
+            newSection: {
+                name: "",
+                parent: "",
+            }
 
         },
+        monitor: {
+            chart: false,
+            visible: ["Neuron 1_Soma"],
+            axes: {
+                x: {
+                    title:"X Axis",
+                    lock: false,
+                    min:0,
+                    max:0
+                },
+                y: {
+                    title:"Y Axis",
+                    lock: false,
+                    min:0,
+                    max:0
+                }
+            }
+        },
+        menus: menus,
         monitorTab: '',
         neurons: [],
         dendriteGid:1,
         svgData:{},
         simulation: {
             'time': 25,
-            'potential': -65
+            'potential': -65,
+            'celsius': 6.3
         },
         stimuli: [],
         availableStimuli: stimuli(),
         selectedStimulus: "IClamp",
-        // stimulusTypes: ['IClamp', 'VClamp', 'SEClamp'],
-        // stimulusOptions: [
-        //     {'label': 'Delay (ms)',
-        //      'helptext': 'Time before stimulus onset',
-        //      'attribute': 'delay'},
-        //      {'label': 'Duration (ms)',
-        //      'helptext': 'Duration of stimulus',
-        //      'attribute': 'dur'},
-        //      {'label': 'Amp (nA)',
-        //      'helptext': 'Amplitude of stimulus',
-        //      'attribute': 'amp',
-        //      'step': 0.1},
-        //      ],
-        sectionOptions: [
-            {'label': 'Length',
-             'helptext': 'Microns',
-             'attribute': 'L'},
-             {'label': 'Diameter (ms)',
-             'helptext': 'Microns',
-             'attribute': 'diam'}
-             // {'label': 'Passive conductance',
-             // 'helptext': 'S/cm2',
-             // 'attribute': 'g',
-             // 'step': 0.001},
-             // {'label': 'Reversal Potential',
-             // 'helptext': 'mV',
-             // 'attribute': 'e'}
-             ],
-        connectionOptions: [
-            {'label': 'Delay (ms)',
-             'helptext': 'Time between threshold crossing and event delivery',
-             'attribute': 'delay'},
-             {'label': 'Weight',
-             'helptext': 'Weight delivered to target',
-             'attribute': 'weight'},
-             {'label': 'Threshold (mV)',
-             'helptext': 'Voltage at which event triggered',
-             'attribute': 'threshold'},
-             {'label': 'Tau (ms)',
-             'helptext': 'Decay time constant of synapse',
-             'attribute': 'tau'},
-             {'label': 'Reversal potential (mV)',
-             'helptext': 'Reversal potential of synapse',
-             'attribute': 'e'}
-             ],
-        simulationOptions: [
-            {'label': 'Time (ms)',
-             'helptext': 'Time for simulation to run',
-             'attribute': 'time'},
-             {'label': 'Membrane Potential (mV)',
-             'helptext': 'Initial voltage of membranes',
-             'attribute': 'potential'}
-             ],
-        channels: channels(),
+        labels: optionLabels,
+        channels: channelData,
         connections: [],
         recording: {},
-        monitor: false,
         views: [],
         chartKey: chartKey,
         neuronTemplate: {},
@@ -128,23 +82,80 @@ var app = new Vue({
     },
     computed: {
         editorNeuron: function() {
-            return this.getNeuron(this.editor.gid)
+            return this.getNeuron(this.editor.gid);
         },
 
         editorSections: function() {
-            return this.getSections(this.editor.neuron)
+            return this.getSections(this.editor.neuron);
+        },
+
+        editorSection: function() {
+            let secs = this.editor.selection;
+            if (secs.length == 1 && Section.prototype.isPrototypeOf(secs[0])) {
+                return secs[0];
+            }
+            return null;
+        },
+
+        editorSectionFlag: function() {
+            let secs = this.editor.selection;
+            if (secs.length > 0 && secs[0].type=="Section") {
+                return true;
+            }
+            return false;
+        },
+
+        editorAvailableChannels: function() {
+            let used = Object.keys(this.editorParams.channels);
+            let avail = Object.values(this.channels).filter(x=> !(used.includes(x.name)));
+            return avail;
         },
 
         editorParams: function() {
+            // Find all params which exist in all active sections
+            let params = {};
+            let all = this.editor.selection;
+            if (all.length == 0) {
+                return {};
+            }
 
-        }
+            if (all.length == 1 && Section.prototype.isPrototypeOf(all[0])) {
+                let sec = all[0];
+                let general = {};
+                general.name = sec.name;
+                general.parent = sec.parent;
+                params.general = general;
+            }
+
+            // Geometry
+            let geom = extractParams(all, 'geometry');
+            if (Object.keys(geom).length) {
+                params.geometry = geom;
+            }
+            // Biophysics
+            let biop = extractParams(all, 'biophysics');
+            if (Object.keys(biop).length) {
+                params.biophysics = biop;
+            }
+            // Channels
+            let channels = {};
+            let allChannels = all.map(x=>x.channels || {});
+            let shared = sharedKeys(allChannels);
+            for (var channelName of shared) {
+                let newChannel = extractParams(allChannels, channelName);
+                channels[channelName] = newChannel;
+            }
+            params.channels = channels;
+            
+            return params;
+        },
 
         maxTime: function() {
              if ('t' in this.recording) {
-                return Math.max(...this.recording.t)
+                return Math.max(...this.recording.t);
              }
              else {
-                return 1
+                return 1;
              }
         },
 
@@ -170,10 +181,152 @@ var app = new Vue({
         },
 
         getTimeProp: function(time) {
-            return parseInt((time / this.maxTick) * 100) + "%"
+            return parseInt((time / this.maxTick) * 100) + "%";
         },
 
-        neuron: neuronTemplate,
+        getChannelData: function(channels) {
+            let cd = Object.keys(channels).map(x=> 
+                {''
+                channelData[x];
+            });
+            return cd;
+        },
+
+        // Editor
+
+        editorChange: function(group, param, e) {
+            console.log("editorChange ", group, param, e);
+            let val = e.target.value;
+            for (let sec of this.editor.selection) {
+                sec.update(group, param, val);
+            }
+        },
+
+        updateEditorSegments: function(e){
+            let val = e.target.value;
+            for (let sec of this.editor.selection) {
+                Vue.set(sec.geometry, 'nseg', val);
+                sec.updateSegments();
+            }
+        },
+
+        editNeuron: function(neuronGid) {
+            console.log("editing: ", neuronGid);
+            this.closePopups();
+            this.popups.editor = true;
+            let neuron = this.getNeuron(neuronGid);
+            this.editor.neuron = neuronGid;
+            $('.pop-menu-container').removeClass('show');
+        },
+
+        secsCompatible: function(a, b) {
+            if (a.type != b.type) {
+                    return false;
+                }
+            if (a.type == "Segment") {
+                return a.parent().gid == b.parent().gid;
+            }
+            return true;
+        },
+
+        editClear: function(section=null) {
+            this.editor.selection = this.editor.selection.filter(x=>x==section);
+        },
+
+        editClearType: function(section) {
+            this.editor.selection = this.editor.selection.filter(
+                x=>this.secsCompatible(section, x));
+            if (!this.secsCompatible(section, this.editor.lastSelected)){
+                this.editor.lastSelected = null;
+            }
+        },
+
+        editorToggle: function(section) {
+            let idx = this.editor.selection.indexOf(section);
+            if (idx >= 0) {
+                this.editor.selection.splice(idx, 1);
+
+            } else {
+                this.editor.selection.push(section);
+            }
+        },
+
+        editorRefresh: function() {
+            // TODO: Hacky fix to reload channels
+            let selection = this.editor.selection;
+            this.editor.selection = "";
+            this.editor.selection = selection;
+        },
+
+        editorSelectBetween(a, b) {
+            let secList;
+            if (a.type == "Segment") {
+                secList = a.parent().segments;
+            } else {
+                secList = this.editorSections;
+            }
+            let indexA = secList.indexOf(a);
+            let indexB = secList.indexOf(b);
+            if (indexA < 0 || indexB < 0) {
+                console.log("Sections not found: ", a, b)
+                return false;
+            }
+            // Ensure indexA smaller
+            if (indexB < indexA) {
+                [indexA, indexB] = [indexB, indexA];
+            }
+
+            for (var i=indexA; i<= indexB; i++) {
+                let sec = secList[i];
+                if (!this.editor.selection.includes(sec)) {
+                    this.editor.selection.push(sec);
+                }
+                
+            }
+        },
+
+        editorSelect: function(section, e) {
+            this.editClearType(section);
+            if (!(e.ctrlKey || e.metaKey || e.shiftKey)) {
+                this.editClear(section);
+            }
+            if (e.shiftKey) {
+                this.editorSelectBetween(section, this.editor.lastSelected)
+            } else {
+                this.editorToggle(section);
+            }
+            this.editor.lastSelected = section;
+        },
+
+        editorRemoveChannel: function(channelName) {
+            for (let sec of this.editor.selection) {
+                console.log(this.editorNeuron, sec.name, channelName);
+                this.removeChannel(this.editorNeuron, sec.name, channelName);
+            }
+            this.editorRefresh();
+        },
+
+        editorAddChannel: function() {
+            let channelName = this.editor.selectedChannel;
+            for (let sec of this.editor.selection) {
+                console.log(this.editorNeuron, sec.name, channelName);
+                sec.addChannel(channelName);
+            }
+            this.editorRefresh();
+        },
+
+        editorUpdateSection: function() {
+            let parent = this.editor.newSection.parent;
+            if (parent) {
+                let name = this.editorNeuron.nameSection(parent);
+                this.editor.newSection.name = name;
+            }
+        },
+
+        editorClearNewSection: function() {
+            this.editor.newSection.parent = "";
+            this.editor.newSection.name = "";
+        },
 
         // Layout
 
@@ -187,7 +340,7 @@ var app = new Vue({
                 if (tabname != "spikes") {
                     app.drawChart(tabname);
                 }  
-            })
+            });
         },
 
         // Add/Remove
@@ -197,7 +350,11 @@ var app = new Vue({
             stim.gid = this.getMaxGid('stimuli') + 1;
             stim_type_idx = this.stimuli.filter(
                 x=>x.stim_type == name).length + 1;
-            stim.name = stim.stim_type + " " + stim_type_idx
+            stim.name = stim.stim_type + " " + stim_type_idx;
+
+            // Pre-select section
+            let section = this.getSections(stim.neuron)[0] || {};
+            stim.section = section.name || "";
             this.stimuli.push(stim);
         },
 
@@ -218,84 +375,57 @@ var app = new Vue({
             this.connections.splice(index,1);
         },
 
-        addDendrite: function(index) {
-            let dend = dendriteTemplate();
-            dend.gid = this.getMaxGid(this.neurons[index].dendrites) + 1
-            this.neurons[index].dendrites.push(dend);
+        nameSection: function(neuronGid){
+            let secNames = this.getSections(neuronGid).map(x=>x.name);
+            for (n of ['Soma', "Axon", "Dendrite 1"]) {
+                if (!(secNames.includes(n))) {
+                    return n;
+                }
+            }
+            let dendrites = secNames.filter(x=>x.startsWith("Dendrite"));
+            return ("Dendrite " + (dendrites.length + 1));
         },
 
-        removeDendrite: function(neuronGid, dendriteIndex) {
-            let neuron = this.neurons.filter(function(x) {
-                return x.gid == neuronGid
-            })[0];
-            neuron.dendrites.splice(dendriteIndex, 1);
+        addSection: function(neuronGid, name=null, parent=null) {
+            name = name || this.nameSection(neuronGid);
+            let secs = this.getSections(neuronGid);
+            let gid = this.getMaxGid(secs) + 1;
+            let sec = new Section(name, gid);
+            if (secs.length > 0) {
+                sec.parent = parent || secs[0].gid;
+            }
+            // dend.gid = this.getMaxGid(this.neurons[index].dendrites) + 1;
+            let neuron = this.getNeuron(neuronGid);
+            neuron.sections.push(sec);
+        },
+
+        removeSection: function(neuronGid, sectionIndex, e) {
+            console.log(e);
+            e.stopPropagation();
+            let neuron = this.getNeuron(neuronGid);
+            neuron.sections.splice(sectionIndex, 1);
         },
 
         addChannel: function(neuron, section) {
-            let sec = this.getSection(neuron.gid, section)
-            let channel = channels().filter(x=> x.name == sec.data.selectedChannel).pop();
-            sec.channels.push(channel);
+            console.log("Adding channel: ", neuron, section);
+            let sec = this.getSection(neuron.gid, section);
+            let chanId = "#" + neuron.gid + '-' + sec.name + '-newChannel';
+            console.log(chanId);
+            let name = $(chanId).val();
+            console.log(name);
+
+            sec.addChannel(name);
+            app.$forceUpdate();
         },
 
         removeChannel: function(neuron, section, channel) {
-            let sec = this.getSection(neuron.gid, section)
-            sec.channels = sec.channels.filter(x=>x.name != channel)
+            let sec = this.getSection(neuron.gid, section);
+            sec.removeChannel(channel);
         },
 
         // Neurons
 
-        editNeuron: function(neuronGid) {
-            this.closePopups();
-            this.popups.editor = true;
-            let neuron = this.getNeuron(neuronGid);
-            this.editor.neuron = neuronGid;
-        },
-
-        editClear: function(section=null) {
-            this.editor.selection = this.editor.selection.filter(x=>x==section)
-        },
-
-        editorToggle: function(section) {
-            let idx = this.editor.selection.indexOf(section);
-            if (idx >= 0) {
-                this.editor.selection.splice(idx, 1)
-            } else {
-                this.editor.selection.push(section)
-            }
-        },
-
-        editorSelectBetween(a, b) {
-            let indexA = this.editorSections.indexOf(a);
-            let indexB = this.editorSections.indexOf(b);
-            if (indexA < 0 || indexB < 0) {
-                console.log("Sections not found: ", a, b)
-                return false
-            }
-            // Ensure indexA smaller
-            if (indexB < indexA) {
-                [indexA, indexB] = [indexB, indexA];
-            }
-
-            for (var i=indexA; i<= indexB; i++) {
-                let sec = this.editorSections[i];
-                if (!this.editor.selection.includes(sec)) {
-                    this.editor.selection.push(sec)
-                }
-                
-            }
-        },
-
-        editorSelect: function(section, e) {
-            if (!(e.ctrlKey || e.metaKey)) {
-                this.editClear(section);
-            }
-            if (e.shiftKey) {
-                this.editorSelectBetween(section, this.editor.lastSelected)
-            } else {
-                this.editorToggle(section)
-            }
-            this.editor.lastSelected = section;
-        },
+        // Neuron Selection
 
         getNeuron: function(neuronGid) {
             return this.neurons.filter(x=> x.gid == neuronGid).pop();
@@ -304,13 +434,9 @@ var app = new Vue({
         getSections: function(neuronGid) {
             let neuron = this.getNeuron(neuronGid);
             if (neuron == undefined) {
-                return []
+                return [];
             }
-            let secs = ['soma', 'axon'].filter(x => {return x in neuron})
-            for (dend of neuron.dendrites) {
-                secs.push('dendrite-' + dend.gid);
-            }
-            return secs
+            return neuron.sections;
 
         },
 
@@ -319,56 +445,82 @@ var app = new Vue({
             if (neuron == undefined) {
                 return neuron;
             }
-            if (["axon", "soma"].includes(section)) {
-                return neuron[section];
-            }
-
-            if (section.startsWith('dendrite')) {
-                let dendGid = parseInt(section.slice(9))
-                let dend = neuron.dendrites.filter(x=>x.gid == dendGid).pop()
-                if (dend == undefined) {console.log("No dendrite with gid " + dendGid + " on neuron " + gid)}
-                return dend;
-            }
+            return neuron.sections.filter(x=>x.name == section).pop();
         },
 
         availableChannels: function(gid, section) {
             let sec = this.getSection(gid, section)
             if (sec == undefined) {
                 console.log("ERROR: no section found in available channels: ", gid, section)
-                return []
+                return [];
             }
-            let used = sec.channels.map(x=>x.name);
-            let avail = this.channels.filter(x=> !(used.includes(x.name)));
+            let used = Object.keys(sec.channels);
+            let avail = Object.values(this.channels).filter(x=> !(used.includes(x.name)));
             let names = avail.map(x=>x.name);
-            if (names.length > 0){
-                if (!(names.includes(sec.data.selectedChannel))) {
-                    sec.data.selectedChannel = names[0] || ""
-                }
-            }
-            return avail
+            // if (names.length > 0){
+                // if (!(names.includes(sec.data.selectedChannel))) {
+                    // sec.data.selectedChannel = names[0] || "";
+                // }
+            // }
+            return avail;
         },
 
-        addNeuron: function() {
-            console.log('adding Neuron')
-            let neuron = this.neuron();
+        neuronTextWidth: function(gid, mult=6, marg=20) {
+            let el = document.getElementById('neuron-text-'+gid);
+            // TODO: fix width update timing
+            // if (el) {
+            //     return el.getBBox().width + 20 + "px";
+            // } else {
+            let neuron = this.getNeuron(gid);
+            return neuron.name.length * mult + marg + "px";
+            // }
+        },
+
+        selectNeuron: function(gid) {
+            this.changeSettingsTab('neuron');
+            this.$nextTick(function() {
+                $('.config-item-header-container').removeClass('show');
+                $('.config-item-body-container').removeClass('show');
+                let hid = "#neuron-header-" + gid;
+                let bid = "#neuron-body-" + gid;
+                $(hid).addClass('show');
+                $(bid).addClass('show');
+            })
+        },
+
+        // Add/remove neurons
+
+        addNeuron: function(sections=null) {
+            console.log('adding Neuron');
+            console.log(sections);
             
             let gid = this.getMaxGid('neurons') + 1;
-            neuron.gid = gid;
-            neuron.name = "Neuron " + gid;
-            neuron.x = (gid * 120) + 50 + "px";
-            neuron.y = (gid * 2) + 75 + "px";
+            console.log(gid);
+            let color = colors[gid-1];
+            let name = "Neuron " + gid;
+            let x = (gid * 170) + 50;
+            let y = (gid * 2) + 75;
+            let neuron = new Neuron(name, gid, x, y, color, sections);
             this.neurons.push(neuron);
 
             setTimeout(function() {
                 makeDraggable();
                 axonExtend();
-            }, 100)
+            }, 100);
+
+            return neuron;
             
         },
 
-        removeNeuron: function(index) {
-            console.log(`removing neuron ${index}`);
-            let neuron = this.neurons[index];
+        duplicateNeuron: function(gid) {
+            let old = this.getNeuron(gid);
+            let neuron = this.addNeuron(old.sections);
+            // neuron.sections = old.sections;
+        },
+
+        removeNeuron: function(neuronGid) {
+            console.log(`removing neuron ${neuronGid}`);
+            let neuron = this.getNeuron(neuronGid);
             // Destroy connections
             let connections = this.neuronConnections(neuron.gid);
             for (conn of connections) {
@@ -378,6 +530,7 @@ var app = new Vue({
             // Destron neuron element
             // $('#neuron-' + neuron.gid).remove();
             // Remove data element
+            let index = this.neurons.indexOf(neuron);
             this.neurons.splice(index,1);
         },
 
@@ -386,8 +539,8 @@ var app = new Vue({
         },
 
         neuronConnections: function(neuronGid) {
-            let conns = []
-            for (con of this.connections) {
+            let conns = [];
+            for (let con of this.connections) {
                 if (con.source == neuronGid | con.target == neuronGid) {
                     conns.push(con)
                 }
@@ -397,7 +550,7 @@ var app = new Vue({
         },
 
         drawConnections: function() {
-            for (con of this.connections) {
+            for (let con of this.connections) {
                 if (con.source > 0 & con.target > 0) {
                     drawConnection(con.source, con.target, con.gid)
                 }
@@ -412,6 +565,11 @@ var app = new Vue({
                 this.neurons[i].x = parseInt(neuronElement.getAttribute('x'))
                 this.neurons[i].y = parseInt(neuronElement.getAttribute('y'))
             }
+        },
+
+        updateSec: function(sec, group, param, e) {
+            let val = e.target.value;
+            sec.update(group, param, val);
         },
 
         // Load and Save
@@ -438,10 +596,13 @@ var app = new Vue({
             data.stimuli = this.stimuli;
             data.connections = this.connections;
             data.filename = this.save.filename;
+            let monitor = Object.assign({}, this.monitor);
+            delete monitor.chart;
+            data.monitor = monitor;
             axios.post(url,data,{headers: headers})
               .then(response => {
-                  console.log(response.data)
-                  this.toastObj(response.data)
+                  console.log(response.data);
+                  this.toastObj(response.data);
             });
             this.savePopup(false);
         },
@@ -456,11 +617,19 @@ var app = new Vue({
               .then(response => {
                   console.log(response.data)
                   let conf = response.data;
-                  let keys = Object.keys(conf)
-                  this.neurons = conf.neurons;
+                  let keys = Object.keys(conf);
+                  this.neurons = [];
+                  for (let n of conf.neurons) {
+                    let newNeuron = new Neuron(n.name, n.gid, n.x, n.y,
+                                               n.color, n.sections);
+                    this.neurons.push(newNeuron);
+                  }
                   this.simulation = conf.simulation;
                   this.stimuli = conf.stimuli;
                   this.connections = conf.connections;
+                  let monitor = conf.monitor;
+                  monitor.chart = this.monitor.chart;
+                  this.monitor = monitor;
 
                   this.$nextTick(function () {
                     this.drawConnections();
@@ -484,10 +653,11 @@ var app = new Vue({
 
             let data = {'time': this.simulation.time,
                         'potential': this.simulation.potential,
+                        'celsius': this.simulation.celsius,
                         'stimuli': this.stimuli,
-                        'neurons': this.neurons,
+                        'neurons': this.neurons.map(x=>x.data()),
                         'connections': this.connections
-                        }
+                        };
             console.log(data)
             axios.post(url,data,{headers: headers})
               .then(response => {
@@ -519,131 +689,143 @@ var app = new Vue({
         },
 
         drawChart: function(view) {
-            console.log(`plotting new chart: ${view}`)
+            console.log(`plotting new chart: ${view}`);
             var ctx = document.getElementById('monitor-canvas');
-            console.log(ctx)
-            ctx.height = "300px"
-            if (this.monitor) {
-                this.monitor.destroy();
+            console.log(ctx);
+            ctx.height = "300px";
+            if (this.monitor.chart) {
+                this.monitor.chart.destroy();
+            }
+            if (!('views' in this.recording)) {
+                console.log("No data to create chart.");
+                return null;
             }
             let cells = Object.keys(this.recording.views[view]);
 
             var yLabel = this.chartKey[view].ylab;
             let datasets = [];
-            var primaryColor = "#36005d"
+            var primaryColor = "#36005d";
 
             // Loop through cells
             for (var i=0; i < cells.length; i++) {
-                let cell = cells[i]
-                let sections = this.recording.views[view][cell]
+                const cell = cells[i];
+                let neuron = this.neurons.filter(x=> {
+                        const a = cell;
+                        return x.name == a;
+                    })[0];
+                let sections = this.recording.views[view][cell];
                 // Loop through sections
-                for (section in sections) {
+                for (var section in sections) {
 
                     let yData = sections[section];
-                    let xydata = []
+                    let xydata = [];
                     for (j=0; j < yData.length; j++) {
                         xydata.push({
                             "x": this.recording.t[j],
                             "y": yData[j]
-                        })
+                        });
                     }
-                    let color = colors[i]
+                    let color = neuron.color;
                     let name = cell;
-                    if (section.includes('axon') | section.includes('dendrite')) {
-                        color = hexToRgba(color, 0.5)
-                        name = cell + ": " + section;
-                    } else if (view == 'amp') {
-                        // Hacky fix for stims TODO: clean up
-                        name = section;
-                        color = colors[datasets.length];
+                    console.log(cell + '_' + section);
+                    if (this.monitor.visible.includes(cell + '_' + section)) {
+                        if (section != "Soma") {
+                            color = hexToRgba(color, 0.5);
+                            name = cell + ": " + section;
+                        } else if (view == 'amp') {
+                            // Hacky fix for stims TODO: clean up
+                            name = section;
+                            color = colors[datasets.length];
+                        }
+                        let cellData = {
+                        'label': name,
+                        'data': xydata,
+                        'fill': false,
+                        "borderColor" :color,
+                        "lineTension" :0.1,
+                        "pointRadius": 0
+                        };
+                        datasets.push(cellData);
                     }
-                    let cellData = {
-                    'label': name,
-                    'data': xydata,
-                    'fill': false,
-                    "borderColor" :color,
-                    "lineTension" :0.1,
-                    "pointRadius": 0
-                    };
-                    datasets.push(cellData)
                 }
             }
 
-            this.monitor = new Chart(ctx, {
+            let options = {
+                maintainAspectRatio: false,
+                scales: {
+                   yAxes: 
+                       [{
+                         scaleLabel: 
+                            {
+                           display: true,
+                           labelString: yLabel
+                            },
+                        ticks: {
+                            precision: 0
+                        }
+                        }],
+                   xAxes: 
+                        [{
+                         type: "linear",
+                         scaleLabel: 
+                            {
+                               display: true,
+                               labelString: "Time (ms)"
+                            },
+                         ticks: {
+                            precision: 0
+                            // stepSize: 1,
+                        }
+                    }]
+                },
+                tooltips: {
+                    callbacks: {
+                        label: function(tooltipItem, data) {
+                            var label = data.datasets[tooltipItem.datasetIndex].label || '';
+
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += Math.round(tooltipItem.yLabel * 100) / 100;
+                            return label;
+                        },
+                        title: function(tooltipItem, data) {
+                            tooltipItem = tooltipItem[0];
+                            label = Math.round(tooltipItem.xLabel * 100) / 100;
+                            label += "ms"
+                            return label;
+                        }
+                    }
+                },
+                legend: {
+                    onClick: newLegendClickHandler,
+                    labels: {
+                        filter: function(item, chart) {
+                            return !item.text.includes(':');
+                        }
+                    },
+                }
+            };
+
+            if (this.monitor.axes.x.lock) {
+                options.scales.xAxes[0].ticks.min = this.monitor.axes.x.min;
+                options.scales.xAxes[0].ticks.max = this.monitor.axes.x.max;
+
+            }
+
+            if (this.monitor.axes.y.lock) {
+                options.scales.yAxes[0].ticks.min = this.monitor.axes.y.min;
+                options.scales.yAxes[0].ticks.max = this.monitor.axes.y.max;
+
+            }
+
+            this.monitor.chart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: this.recording.t,
                     datasets: datasets,
                 },
-                options: {
-                    maintainAspectRatio: false,
-                    scales: {
-                       yAxes: [{
-                         scaleLabel: {
-                           display: true,
-                           labelString: yLabel
-                         }
-                       }],
-                       xAxes: [{
-                         type: "linear",
-                         scaleLabel: {
-                           display: true,
-                           labelString: "Time (ms)"
-                         },
-                         ticks: {
-                            // stepSize: 1,
-                            precision: 0
-                        }
-                       }]
-                    },
-                    tooltips: {
-                        callbacks: {
-                            label: function(tooltipItem, data) {
-                                var label = data.datasets[tooltipItem.datasetIndex].label || '';
-
-                                if (label) {
-                                    label += ': ';
-                                }
-                                label += Math.round(tooltipItem.yLabel * 100) / 100;
-                                return label;
-                            },
-                            title: function(tooltipItem, data) {
-                                tooltipItem = tooltipItem[0];
-                                label = Math.round(tooltipItem.xLabel * 100) / 100;
-                                label += "ms"
-                                return label;
-                            }
-                        }
-                    },
-                    legend: {
-                        onClick: newLegendClickHandler,
-                        labels: {
-                            filter: function(item, chart) {
-                                // Logic to remove a particular legend item goes here
-                                return !item.text.includes(':');
-                            },
-                            // generateLabels: function(chart) {
-                            //     let data = chart.data.datasets;
-                            //     console.log(data)
-                            //     let trimmed = data.map(function(x) {
-                            //         lab = x.label || ""
-                            //         if (lab.includes("soma")) {
-                            //             let colonIndex = lab.indexOf(":")
-                            //             return lab.slice(0, colonIndex)
-                            //         }
-                            //         else { return lab}
-                            //     })
-                            //     console.log(trimmed)
-                            //     return trimmed
-                            // }
-                            //     console.log("generating labels!")
-                            //     console.log("arg1", arg1)
-                            //     console.log("arg2", arg2)
-                            //     return arg1
-                            // }
-                        },
-                    }
-                }
+                options: options
             });
         },
 
@@ -674,6 +856,16 @@ var app = new Vue({
             }
                 this.load.selected = ""
                 this.getSaved();
+        },
+
+        monitorPopup: function() {
+            this.closePopups();
+            this.popups.monitor = true;
+        },
+
+        monitorApplySettings: function() {
+            // this.closePopups();
+            this.drawChart(this.monitorTab);
         },
 
         addToast: function(title, subtitle="", message="", messages=Object(), level="info") {
@@ -727,7 +919,6 @@ var app = new Vue({
             boundsPadding: 0.2,
             // Prevent panzoom panning while dragging neuron
             beforeMouseDown: function(e) {
-                console.log(e.target.parentElement.parentElement)
             if (e.target.parentElement.parentElement.classList.contains('neuron-container')) {
                 return true;
             }
@@ -735,7 +926,6 @@ var app = new Vue({
             }
             
         });
-
         // Unhide popups
         document.getElementById('popup-container').classList.remove('hide');
     }
@@ -768,7 +958,7 @@ function makeDraggable() {
         if (event.target.classList.contains('axon-terminal')) {
             return false
         }
-        console.log('neuron click')
+        // console.log('neuron click')
         // bring target to front
         $(event.target.parentElement).append( event.target );
       })
@@ -785,7 +975,7 @@ function makeDraggable() {
       .bind('drag', function(event, ui){
         // ignore terminals
         if (event.target.classList.contains('axon-terminal')) {
-            console.log('stopping drag!')
+            // console.log('stopping drag!')
             // event.preventDefault();
             // event.stopPropagation();
             return false
@@ -818,6 +1008,9 @@ function makeDraggable() {
         // Find attached connections
         let gid = parseInt(event.target.id.slice(7));
         let conns = app.neuronConnections(gid);
+        let neuron = app.getNeuron(gid);
+        neuron.x = scaledX;
+        neuron.y = scaledY;
         // Redraw attached connections
         for (con of conns) {
             drawConnection(con.source, con.target, con.gid)
@@ -878,7 +1071,7 @@ function drawConnection(sourceGid, targetGid, connectionGid) {
         $('#svg-canvas-inner').prepend(connection);
     }
 
-    console.log(`M${sx} ${sy} C ${x1} ${y1}, ${x2} ${y2}, ${tx} ${ty}`)
+    // console.log(`M${sx} ${sy} C ${x1} ${y1}, ${x2} ${y2}, ${tx} ${ty}`)
     connection.setAttribute('d', `M${sx} ${sy} C ${x1} ${y1}, ${x2} ${y2}, ${tx} ${ty}`)
 }
 
@@ -886,8 +1079,6 @@ function axonExtend() {
     $('.axon-terminal')
     .bind('mousedown', function(event, ui){
         // bring target to front
-        console.log('axon-terminal click')
-        console.log(event.target)
         let terminal = event.target
         let terminalRect = terminal.getBoundingClientRect();
         let extension = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -900,7 +1091,6 @@ function axonExtend() {
         // let rawY = event.pageY
         let rawX = terminalRect.x 
         let rawY = terminalRect.y 
-        console.log(`raw ${rawX}, ${rawY}`)
 
         let relX = rawX - containerOffset.left
         let relY = rawY - containerOffset.top
@@ -921,14 +1111,8 @@ function axonExtend() {
         extension.id = 'axon-extension'
         // add to doc
         $('#svg-canvas-inner').append(extension);
-        console.log(extension)
         // 
         $('#svg-canvas').on('mousemove', function(event, ui){
-            console.log('dragging')
-            console.log(event.pageX, event.pageY)
-
-            // bring target to front
-            console.log('axon-terminal drag')
             // get click coords
             let container = $('#canvas-container');
             let containerOffset = container.offset();
@@ -991,6 +1175,8 @@ window.onload = function() {
     document.getElementById('editor-popup-sidebar-container')
         .onselectstart = function() {
         return false;
-    }
+    };
 }
+
+
 

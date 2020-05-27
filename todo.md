@@ -1,116 +1,143 @@
+# Todo
 
-Lara notes
-----------
-- G-protei
-
-- Hyperpolarization .. cation current
-- H-current
-
-- Chloride ion
-
-- Feed in spiking data
-
-- Response to feedback over time
-
-- Physiological properties of cells
-
-- change defaults
-
-Todo
-----
-
-- fork dev
+Next up
+-------
 
 
-- Neuron editor
-    - Param computed method 03.16-
-        - Geometry & Channel settings
-        - Neuron settings
-    - Param display
-    - Selection data
-    - Nseg
-        - Nseg parameters
-        - Take nseg params from parent
-    - Handle hierarchical params
+- PUSH
 
-    - Propagate changes onchange to actual sections
-    - Save/Load buttons
-    - Neuron name
 
-    - Visual representation
-        - Match neuron data
-        - Select
-        - Create
+- Check NiA Simulations
+- 201 Notes
 
-- Changing ion concentrations
 
-- Jo notes
 
-- Ion channels
-    - How granular
+- Connectivity Matrix
 
-- Stims
-    - Fix AC period algorithm
-    - Step current
-    - stimulus names (and preview)
-    - Representation in minimap
+- Lara neuro stuff
+    - Hyperpolarization .. cation current
+    - H-current
 
-- Neurons
-    - Represent in canvas
-        - name
-        - color
-        - edit
-    - pre-specified neurons
-    - nseg
-    - all dendrites as one
-    - neurotransmitters
-    - point processes
-    - global variables (e.g. kbath)
+- Write up report
+
+- Tutorials
+
+
+- Fix vix toggle line
+- Spike viz colors
+- Amplitude plot
+- Stop plots from relying on Soma
+
+
+
+
+Categorized
+-----------
+
+### Bugs
+- showMenu bug
+
+### Neuroscience
+- Check NiA simulations
+- G-proteins (2)
+- Plasticity (STDP) (3)
+
+- ING network
+    - change leak conductance
+    - should change osciallation frequency
+
+### Tutorials
+- Tutorial interface (2)
+- Inhibition of synaptic potential (3)
+
+### Stimuli
+
+- Exist on canvas (2)
+- Refactor
+    - Classes
+    - Create -> new
+- Fix AC period algorithm
+- Step current
+- stimulus names (and preview)
+- Representation in minimap
+
+### Neurons
+
+- point processes (1)
+- Represent in canvas (2)
+    - edit 
+    - move
+    - top-right box
+- pre-specified neurons (3)
+- neurotransmitters (3)
+- Ion channels (3)
+    - Assigned
+    - Globals (e.g. kbath)
         - Push to simulation tab?
 
-- Simulation
-    - temperature
-    - update interval
-    - Custom recordings
-    - performance
-    - incremental for long stretches
-    - compress vectors?
-    - implement reset
+#### Neuron editor
 
-Views
-    - ~~1 color per neuron~~
-    - ~~plotLabels~~
-    - ~~axisLabels~~
-    - ~~Fix x-axis t~~
-    - ~~Fix Dend V recordings~~
-    - LFP summation
-    - spike portraits
-        - Better tooltips
-        - Gridlines
-    - heatmap for neuron
-    - by-dendrite heatmaps
-    - Phase portraits
-    - Heatmaps
-    - Viz popout
-    - save/download plots
-    - plot multiple values in one view
+- Remove sections (2)
+- Channel suggest (2)
+- Input width (2)
+- Save/Load buttons (3)
+- Hierarchical indenting
+- Improve app.getSections
+
+- Visual representation (3)
+    - Match neuron data
+    - Select
+    - Create
+
+### Simulation
+
+(3)
+- Changing ion concentrations
+- update interval
+- Custom recordings
+- performance
+- incremental for long stretches
+- compress vectors?
+- implement reset
+
+### Views
+- LFP summation
+- spike portraits
+    - Better tooltips
+    - Gridlines
+- heatmap for neuron
+- by-dendrite heatmaps
+- Phase portraits
+- Heatmaps
+- save/download plots
+- plot multiple values in one view
+- Axes min-max jQueryUI range slider
+- get params from settings
+- Reset on chart change
+- Change colors
 
 
-- Connections
-    - Refactor connection code
-    - More types of synapse
-    - Connection Matrix
+### Connections
+- Chloride ion synapse (1)
+- Connection Matrix (1)
+- Draw on canvas (2)
+- Refactor connection code
+- More types of synapse
 
-- Recording
-    - Impedance
-        - https://www.neuron.yale.edu/phpBB/viewtopic.php?f=28&t=771
 
-- General
-    - User accounts
-    - localise dependencies
-    - Grants/funding
-        - Rapid
-        - Eager
+### Recording
+- Impedance
+    - https://www.neuron.yale.edu/phpBB/viewtopic.php?f=28&t=771
+
+### General
+- User accounts
+- localise dependencies
+- Grants/funding
+    - Rapid
+    - Eager
+- Jo notes
+- Lara: "A la carte"
+
 
 
 - expand/minimize monitor/config
@@ -142,6 +169,13 @@ My First Neuron
 
 - IC genealogy
     - https://icg.neurotheory.ox.ac.uk/viewer/2
+
+- ModelDB
+    - Kopell
+    - "this is just a list of her submissions, the hippocampal theta/gamma looks interesting"
+    - https://senselab.med.yale.edu/modeldb/author_matches.py?author=Kopell+N
+
+
 
 
 Questions
@@ -196,10 +230,9 @@ Later
         - e.g. title key from stimulus
     - Prevent delete soma
     - tests
-    - Multiple AC clamps on one neuron
+    - Validate params frontend
 
 - Layout
-    - ~~Harmonize Stimulus and Neuron CSS~~
     - SVG elements stay in order while dragging
     - sliders
     - move info to (i)
@@ -237,7 +270,6 @@ Later
     - Separate data from help/title/step
 
 - Features
-    - rename neurons
     - reaction diffusion
     - neuromorpho db
     - custom ion channels
@@ -246,6 +278,7 @@ Later
 - Goals
     - Insert modeldb url and it pings, compiles, and runs
     - channel library with descriptions and parameters you can search through
+    - Generate the pulsing behaviour from Freeman/olfactory bulb in a CA.
 
 
 

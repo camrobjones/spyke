@@ -7,18 +7,30 @@
 
     <meta charset="utf-8">
 
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-55825994-4"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-55825994-4');
+    </script>
+
+
     <!-- Bootstrap -->
     <link rel="stylesheet" href="{% static 'bootstrap-4.4.1/dist/css/bootstrap.min.css' %}">
     <script src="{% static 'jquery-3.3.1.min.js' %}"> </script>
     <script src="{% static 'bootstrap-4.4.1/dist/js/bootstrap.min.js' %}"> </script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <!-- Popper -->
+    <script src="{% static 'popper/popper.min.js' %}"> </script>
 
     <!-- Vue -->
     <script src="{% static 'vue/vue.js' %}"></script>
 
     <!-- Axios -->
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="{% static 'axios/axios.min.js' %}"></script>
 
     <!-- FontAwesome -->
     <script src="{% static 'fontawesome-free-5.12.1-web/js/all.js' %}"></script>
@@ -26,14 +38,12 @@
 
     <!-- Google Fonts -->
     <link href="{% static 'fonts/fonts.css' %}" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@900&display=swap" rel="stylesheet">
-
 
     <!-- Chart Js -->
     <script src="{% static 'chartjs/chart.js' %}"></script>
 
     <!-- Cookies JS -->
-    <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+    <script src="{% static 'cookies/cookies.min.js' %}"></script>
 
     <!-- jQuery UI -->
     <script src="{% static 'jquery-ui-1.12.1.custom/jquery-ui.js' %}"></script>

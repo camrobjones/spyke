@@ -1,23 +1,43 @@
-function hexToRgb(hex) {
-  // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
-  var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-  hex = hex.replace(shorthandRegex, function(m, r, g, b) {
-    return r + r + g + g + b + b;
-  });
-
-  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
-}
+/**
+Data for use in Spyke
+---------------------
+*/
 
 
-function hexToRgba(hex, alpha) {
-    r = hexToRgb(hex);
-    return `rgba(${r.r},${r.g},${r.b},${alpha})`
-}
+/**
+UI constants
+------------
+These are constants used for general UI and aesthetic components
+*/
+
+const colorDict = {
+        purple:  '#b10dc9',
+        orange:  '#ff851b',
+        navy:    '#001f3f',
+        olive:   '#3d9970',
+        yellow:  '#ffdc00',
+        blue:    '#0074d9',
+        silver:  '#dddddd',
+        red:     '#ff4136',
+        aqua:    '#7fdbff',
+        fuchsia: '#f012be',
+        lime:    '#01ff70',
+        maroon:  '#85144b',
+        teal:    '#39cccc',
+        green:   '#2ecc40',
+        gray:    '#aaaaaa',
+        white:   '#ffffff',
+        black:   '#111111',     
+};
+
+const colors = Object.values(colorDict);
+
+/**
+Label Data
+----------
+Data for providing helpful additional information about parameters.
+E.g. labels, help text, units
+*/
 
 const chartKey = {
     'v': {'label': "Voltage",
@@ -47,21 +67,89 @@ const chartKey = {
     'spikes': {'label': "Spikes",
           'ylab': "Action potentials",
           'units': ""},
-}
+};
 
+const geometryLabels = 
+    [
+        {'label': 'Length',
+         'helptext': 'Microns',
+         'attribute': 'L'},
+         {'label': 'Diameter',
+         'helptext': 'Microns',
+         'attribute': 'diam'}
+    ];
 
-function stimulusTemplate() {
-    let data = {
-        delay:5,
-        dur: 1,
-        amp: 0.1,
-        neuron: 1,
-        section: 'dendrite-1',
-        loc: 0.5,
-        stim_type: "IClamp"
-    }
-    return data
-}
+const connectionLabels = 
+    [
+        {'label': 'Delay (ms)',
+         'helptext': 'Time between threshold crossing and event delivery',
+         'attribute': 'delay'},
+         {'label': 'Weight',
+         'helptext': 'Weight delivered to target',
+         'attribute': 'weight'},
+         {'label': 'Threshold (mV)',
+         'helptext': 'Voltage at which event triggered',
+         'attribute': 'threshold'},
+         {'label': 'Tau (ms)',
+         'helptext': 'Decay time constant of synapse',
+         'attribute': 'tau'},
+         {'label': 'Reversal potential (mV)',
+         'helptext': 'Reversal potential of synapse',
+         'attribute': 'e'}
+    ];
+
+const biophysicsLabels = 
+    [
+        {'label': 'Axial resistance',
+         'helptext': 'Ohm * cm',
+         'attribute': 'Ra'},
+         {'label': 'Membrane capacitance',
+         'helptext': 'Micro Farads / cm<sup>2</sup></small>',
+         'attribute': 'cm'}
+    ];
+
+const simulationLabels = 
+    [
+            {'label': 'Time (ms)',
+             'helptext': 'Time for simulation to run',
+             'attribute': 'time'},
+             {'label': 'Membrane Potential (mV)',
+             'helptext': 'Initial voltage of membranes',
+             'attribute': 'potential'},
+             {'label': 'Temperature (C)',
+             'helptext': 'Temperature of environment',
+             'attribute': 'celsius'}
+    ];
+
+const optionLabels = 
+    {
+        geometry: geometryLabels,
+        biophysics: biophysicsLabels,
+        connections: connectionLabels,
+        simulation: simulationLabels
+    };
+
+const menus = {
+            nrn: 
+                [
+                    {'label':'Edit',
+                     func: function(){
+                        return app.editNeuron;
+                        }
+                    },
+                    {'label':'Duplicate',
+                    func: function(){
+                        return app.duplicateNeuron;
+                        }
+                    },
+                    {'label':'Delete',
+                     func: function(){
+                        return app.removeNeuron;
+                        }
+                    },
+
+                ]
+    };
 
 function stimuli() {
     let data = [
@@ -69,7 +157,7 @@ function stimuli() {
          "stim_type": "IClamp",
          "title": "Current Clamp",
          "neuron": 1,
-         "section": "soma",
+         "section": "",
          "loc": 0.5,
          "parameters": 
             [
@@ -97,7 +185,7 @@ function stimuli() {
          "stim_type": "ACClamp",
          "title": "AC Clamp",
          "neuron": 1,
-         "section": "soma",
+         "section": "",
          "loc": 0.5,
          "parameters": 
             [
@@ -140,216 +228,121 @@ function stimuli() {
         }
 
 
-    ]
-    return data
+    ];
+    return data;
 }
 
-function getStimulus(name, params = []) {
-    let stimulus = stimuli().filter(x=>x.name==name).pop()
-    for (var i=0; i < params.length; i++) {
-        stimulus.parameters[i] = params[i];
-    };
-    return stimulus
-}
+/**
+Mechanisms
+----------
+*/
 
-const connectionDefault = {
-    gid: 0,
-    source: 0,
-    target: 0,
-    delay: 5,
-    section: 'dendrite-1',
-    loc: 0.5,
-    weight: 0.05,
-    threshold: 10,
-    tau: 2,
-    e: 0
-}
-
-const dendriteDefault = {
-    gid: 0,
-    L: 200,
-    diam: 1,
-    g: 0.001,
-    e: -65,
-    "channels": []
-}
-
-const colorDict = {
-        purple:  '#b10dc9',
-        orange:  '#ff851b',
-        navy:    '#001f3f',
-        olive:   '#3d9970',
-        yellow:  '#ffdc00',
-        blue:    '#0074d9',
-        silver:  '#dddddd',
-        red:     '#ff4136',
-        aqua:    '#7fdbff',
-        fuchsia: '#f012be',
-        lime:    '#01ff70',
-        maroon:  '#85144b',
-        teal:    '#39cccc',
-        green:   '#2ecc40',
-        gray:    '#aaaaaa',
-        white:   '#ffffff',
-        black:   '#111111',
-        
-}
-
-const colors = Object.values(colorDict)
-
-// Data for spyke JS
-
-function general(L=100, diam=10) {
-   let data = { "name": "general",
-                "title": "General",
-                "parameters":
-                    [
-                        {"name": "L",
-                         "title": "Length",
-                         "help": "Microns",
-                         "value": L,
-                         "step": 1,
-                         "min": 0},
-
-                         {"name": "diam",
-                         "title": "Diameter",
-                         "help": "Microns",
-                         "value": diam,
-                         "step": 1,
-                         "min": 0},
-                    ]
-            }
-    return data
-}
-
-function globalParams() {
-
-    let data = {
-        "cagk": {
-            "d1_cagk": 0.84,
-            "d2_cagk": 1.0,
-            "k1_cagk": 0.18,
-            "k2_cagk": 0.011,
-            "bbar_cagk": 0.28,
-            "abar_cagk": 0.48,
-            "oinf_cagk": 0.0,
-            "tau_cagk": 0.0
-        },
-        "hh2": {},
-        "CaT": {
-            "usetable_CaT": 1.0
-        },
-        "kd": {},
-        "kext": {
-            "kbath_kext": 10.0
-        },
-        "cadifus": {
-            "DCa_cadifus": 0.6,
-            "k1buf_cadifus": 100.0,
-            "k2buf_cadifus": 0.1,
-            "TotalBuffer_cadifus": 0.003,
-            "vrat_cadifus": [0, 0, 0, 0]
-        }
-    }
-    return data
-}
-
-function channels() {
-
-    let data = [
-    { 
+const channelData = 
+    {
+    pas:
+        { 
             "name": "pas",
             "title": "Passive Leak Channel",
             "parameters":
-                [
-                    {"name": "g",
-                     "title": "Leak Conductance",
-                     "help": "S/cm<sup>2</sup>",
-                     "value": 0.001,
-                     "step": 0.001},
+                {
+                    g:
+                        {"name": "g",
+                         "title": "Leak Conductance",
+                         "help": "S/cm<sup>2</sup>",
+                         "value": 0.001,
+                         "step": 0.001},
+                    e:
 
-                     {"name": "e",
-                     "title": "Reversal Potential",
-                     "help": "mV",
-                     "value": -70,
-                     "step": 1}
-                ]
+                         {"name": "e",
+                         "title": "Reversal Potential",
+                         "help": "mV",
+                         "value": -70,
+                         "step": 1}
+                }
         },
 
+    kd:
         {
-            "name": "kd",
-            "title": "Voltage-gated K channel",
-            "parameters":
-                [
+        "name": "kd",
+        "title": "Voltage-gated K channel",
+        "parameters":
+            {
+                gkbar:
                      {"name": "gkbar",
                      "title": "Potassium Conductance",
                      "help": "S/cm<sup>2</sup>",
                      "value": 0.0036,
-                     "step": 0.001},
-                ],
-            // "assigned": 
-            //     {"ik": 0.1,
-            //      "gk": 0.0036,
-            //      "n": 1},
-            // "ions": {
-            //     "ik": 0.1,
-            //     "dik_dv_": 0.5
-            // }
+                     "step": 0.001}
+            }
+        // "assigned": 
+        //     {"ik": 0.1,
+        //      "gk": 0.0036,
+        //      "n": 1},
+        // "ions": {
+        //     "ik": 0.1,
+        //     "dik_dv_": 0.5
+        // }
         },
 
+    Nap_Et2:
         {
-            "name": "Nap_Et2",
-            "title": "Voltage-gated Na channel",
-            "parameters":
-                [
+        "name": "Nap_Et2",
+        "title": "Voltage-gated Na channel",
+        "parameters":
+            {
+                gNap_Et2bar:
                      {"name": "gNap_Et2bar",
                      "title": "Sodium Conductance",
                      "help": "S/cm<sup>2</sup>",
                      "value": 0.0001,
-                     "step": 0.0001},
-                ],
-            // "assigned": 
-            //     {"ik": 0.1,
-            //      "gk": 0.0036,
-            //      "n": 1},
-            // "ions": {
-            //     "ik": 0.1,
-            //     "dik_dv_": 0.5
-            // }
+                     "step": 0.0001}
+            }
+        // "assigned": 
+        //     {"ik": 0.1,
+        //      "gk": 0.0036,
+        //      "n": 1},
+        // "ions": {
+        //     "ik": 0.1,
+        //     "dik_dv_": 0.5
+        // }
         },
 
+    CaT: 
         {
             "name": "CaT",
             "title": "Voltage-gated Ca channel (T-type)",
             "parameters":
-                [
-                    {"name": "gmax",
-                     "title": "Maximum Conductance",
-                     "help": "S/cm<sup>2</sup>",
-                     "value": 0.002,
-                     "step": 0.001}
-                ]
+                {
+                    gmax:
+                        {"name": "gmax",
+                         "title": "Maximum Conductance",
+                         "help": "S/cm<sup>2</sup>",
+                         "value": 0.002,
+                         "step": 0.001}
+                }
         },
 
 
+    cagk:
          {
             "name": "cagk",
             "title": "Ca-activated K Channel",
             "parameters":
-                [
-                    {"name": "gkbar",
-                     "title": "Potassium Conductance",
-                     "help": "S/cm<sup>2</sup>",
-                     "value": 0.01,
-                     "step": 0.01}
-                ]
+                {
+                    gkbar:
+                        {"name": "gkbar",
+                         "title": "Potassium Conductance",
+                         "help": "S/cm<sup>2</sup>",
+                         "value": 0.01,
+                         "step": 0.01}
+                }
         },
-
+    cadifus:
         {
             "name": "cadifus",
             "title": "Ca accumulation",
             "parameters":
-                []
+                {}
         },
 
         // {
@@ -390,150 +383,388 @@ function channels() {
         //         ]
         // },
 
+    kext:
          {
             "name": "kext",
             "title": "K external accumulation",
             "parameters":
-                [
-                     {"name": "fhspace",
-                     "title": "Effective thickness of F-H space",
-                     "help": "Angstrom",
-                     "value": 300,
-                     "step": 1},
-
-                     {"name": "txfer",
-                     "title": "Tau",
-                     "help": "Equilibrium time constant (ms)",
-                     "value": 50,
-                     "step": 1}
-                ]
+                {
+                    fhspace:
+                         {"name": "fhspace",
+                         "title": "Effective thickness of F-H space",
+                         "help": "Angstrom",
+                         "value": 300,
+                         "step": 1},
+                    txfer:
+                         {"name": "txfer",
+                         "title": "Tau",
+                         "help": "Equilibrium time constant (ms)",
+                         "value": 50,
+                         "step": 1}
+                }
         },
-
+    hh:
         {
             "name": "hh",
             "title": "Hodgkin-Huxley",
             "parameters":
-                [
-                    {"name": "gnabar",
-                     "title": "Sodium Conductance",
-                     "help": "S/cm<sup>2</sup>",
-                     "value": 0.12,
-                     "step": 0.1},
+                {
+                    gnabar:
+                        {"name": "gnabar",
+                         "title": "Sodium Conductance",
+                         "help": "S/cm<sup>2</sup>",
+                         "value": 0.12,
+                         "step": 0.1},
+                    gkbar:
+                         {"name": "gkbar",
+                         "title": "Potassium Conductance",
+                         "help": "S/cm<sup>2</sup>",
+                         "value": 0.036,
+                         "step": 0.001},
+                    gl:
+                         {"name": "gl",
+                          "title": "Leak Conductance",
+                          "help": "S/cm<sup>2</sup>",
+                          "value": 0.0003,
+                          "step": 0.0001},
+                    el:
+                         {"name": "el",
+                         "title": "Reversal Potential",
+                         "help": "mV",
+                         "value": -54.3,
+                         "step": 1}
+                }
+        }
+};
 
-                     {"name": "gkbar",
-                     "title": "Potassium Conductance",
-                     "help": "S/cm<sup>2</sup>",
-                     "value": 0.036,
-                     "step": 0.001},
+function globalParams() {
 
-                     {"name": "gl",
-                      "title": "Leak Conductance",
-                      "help": "S/cm<sup>2</sup>",
-                      "value": 0.0003,
-                      "step": 0.0001},
-
-                     {"name": "el",
-                     "title": "Reversal Potential",
-                     "help": "mV",
-                     "value": -54.3,
-                     "step": 1}
-                ]
+    let data = {
+        "cagk": {
+            "d1_cagk": 0.84,
+            "d2_cagk": 1.0,
+            "k1_cagk": 0.18,
+            "k2_cagk": 0.011,
+            "bbar_cagk": 0.28,
+            "abar_cagk": 0.48,
+            "oinf_cagk": 0.0,
+            "tau_cagk": 0.0
         },
-    ]
-    return data
-}
-
-function getChannel(name, params = []) {
-    let channel = channels().filter(x=>x.name==name).pop()
-    for (var i=0; i < params.length; i++) {
-        channel.parameters[i] = params[i];
+        "hh2": {},
+        "CaT": {
+            "usetable_CaT": 1.0
+        },
+        "kd": {},
+        "kext": {
+            "kbath_kext": 10.0
+        },
+        "cadifus": {
+            "DCa_cadifus": 0.6,
+            "k1buf_cadifus": 100.0,
+            "k2buf_cadifus": 0.1,
+            "TotalBuffer_cadifus": 0.003,
+            "vrat_cadifus": [0, 0, 0, 0]
+        }
     };
-    return channel
+    return data;
 }
 
-function dendriteTemplate() {
-    let dendrite = {
-        gid: 1,
-        L: 200,
-        diam: 1,
-        "channels": [
-            getChannel('pas')
-        ],
-        "data":
-            {'selectedChannel': ""}
+function ChannelParameter(channel, name, value) {
+    this.name = value;
+    this.data = function(key) {
+        return channelData[channel].parameters[name][key];
+    };
+
+}
+
+function Channel(name, params = null) {
+    params = params || {};
+    let data = channelData[name];
+    for (param of Object.values(data.parameters)) {
+        // Take provided param if available
+        if (param.name in params) {
+            this[param.name] = params[param.name];
+        } else {
+        this[param.name] = param.value;
+        }
     }
-    return dendrite;
+    this.data = function(key, param=null) {
+        // console.log(`Channel ${name} data: ${key}, ${param}`)
+        if (param != null) {
+            let out = channelData[name].parameters[param][key];
+            // console.log(out);
+            return out;
+        }
+        let out = channelData[name][key];
+        // console.log(out);
+        return out;
+    };
 }
 
-function neuronTemplate() {
-        var neuron = {'open':false,
-                 'gid': 0,
-                 'name': 'neuron_0', 
-                 'x': "150",
-                 'y': "75",
-                'soma':
-                    {
-                        'L': 12,
-                        'diam': 12,
-                        "channels": [
-                            getChannel('hh')
-                        ],
-                        "data": {'selectedChannel': ""}
-                    },
-                'dendrites': 
-                    [
-                        dendriteTemplate()
-                    ],
-                'axon': {
-                    'L': 200,
-                    'diam': 1,
-                    "channels": [
-                        getChannel('hh')
-                    ],
-                    "data": {'selectedChannel': ""}
-                },
-                'general':
-                    {
-                        'Ra': 100,
-                        'cm': 1
-                    },
-                'synapse':
-                    {
-                        'tau': 2
-                    }
+
+
+function stimulusTemplate() {
+    let data = {
+        delay:5,
+        dur: 1,
+        amp: 0.1,
+        neuron: 1,
+        section: 'dendrite-1',
+        loc: 0.5,
+        stim_type: "IClamp"
+    };
+    return data;
+}
+
+// Component getters
+
+function getChannels(names) {
+    let channels = {};
+    for (name of names) {
+        channels[name] = new Channel(name);
+    }
+    return channels;
+}
+
+function getStimulus(name, params = []) {
+    let stimulus = stimuli().filter(x=>x.name==name).pop();
+    for (var i=0; i < params.length; i++) {
+        stimulus.parameters[i] = params[i];
+    }
+    return stimulus;
+}
+
+// Default Components
+
+
+const connectionDefault = {
+    gid: 0,
+    source: 0,
+    target: 0,
+    delay: 5,
+    section: 'dendrite-1',
+    loc: 0.5,
+    weight: 0.05,
+    threshold: 10,
+    tau: 2,
+    e: 0
+};
+
+function Segment(parent, diam=1, cm=1, channels=null) {
+    this.geometry = {};
+    this.geometry.diam = diam;
+    this.biophysics = {'cm': cm};
+    this.channels = channels || {};
+
+    // Simple function to harmonize updating across segs and secs;
+    this.update = function(key, attr, val) {
+        console.log("Running Segment Update");
+        let keys = (key).split('.');
+        let obj = this;
+        for (let k of keys) {
+            obj = obj[k];
+        }
+        obj[attr] = val;
+    };
+
+    this.parent = function(){
+        return parent;
+    };
+}
+
+Segment.prototype.type = "Segment";
+
+function Geometry(L=200, diam=1, nseg=1) {
+    this.L = L;
+    this.diam = diam;
+    this.nseg = nseg;
+}
+
+function Biophysics(Ra=100, cm=1) {
+    this.Ra = Ra;
+    this.cm = cm;
+}
+
+function Section(name, gid, geometry, biophysics,
+                 channels, parent) {
+        this.name = name;
+        this.gid = gid;
+        this._geometry = Object.assign(new Geometry(), geometry);
+        this._biophysics = Object.assign(new Biophysics(), biophysics);
+        channels = channels || {};
+        this._channels = {};
+        for (var key in channels) {
+            let newChannel = new Channel(key, channels[key]);
+            this._channels[key] = newChannel;
+        }
+        
+        this.parent = parent;
+        this.segments = [];
+
+        // Extract params from segments
+        this.params = function(key) {
+            let base = Object.assign({}, this['_'+key]);
+            let segData = extractParams(this.segments, key);
+            // Overwrite base data with segment data
+            for (key in segData) {
+                base[key] = segData[key];
             }
-        return neuron
+            return base;
+        };
+
+        // Propogate changes to segments
+        this.update = function(key, attr, val) {
+            console.log("Running Section Update");
+            let keys = ('_' + key).split('.');
+            let obj = this;
+            for (let k of keys) {
+                obj = obj[k];
+            }
+            // Update base obj
+            obj[attr] = val;
+            // Update segment vals
+            this.segments.forEach(x=>x.update(key,attr,val));
+        };
+
+        // Clean data to send to simulation
+        this.data = function() {
+            return {
+                name: this.name,
+                gid: this.gid,
+                geometry: this._geometry,
+                biophysics: this._biophysics,
+                channels: this._channels,
+                parent: this.parent,
+                segments: this.segments
+            };
+        };
+
+        this.addSegment = function() {
+            let segDiam = this._geometry.diam.valueOf();
+            let cm = this._biophysics.cm.valueOf();
+            let segChannels = Object.assign({}, this.channels);
+            let segment = new Segment(this, segDiam, cm, segChannels);
+            this.segments.push(segment);
+        };
+        this.removeSegment = function() {
+            this.segments.pop();
+        };
+        this.updateSegments = function() {
+            let nseg = this._geometry.nseg;
+            let segLen = this.segments.length;
+            if (nseg > segLen) {
+                let diff = nseg - segLen;
+                for (let i=0; i<diff; i++) {
+                    this.addSegment();
+                }
+            } else {
+                let diff = segLen - nseg;
+                for (let i=0; i<diff; i++) {
+                    this.removeSegment();
+                }
+            }
+        };
+
+        this.removeChannel = function(channelName) {
+            delete this._channels[channelName];
+            for (let seg of this.segments) {
+                delete seg.channels[channelName];
+            }
+        };
+
+        this.addChannel = function(channelName) {
+            let channel = new Channel(channelName);
+            this._channels[channelName] = channel;
+            for (seg of this.segments) {
+                let channel = new Channel(channelName);
+                seg.channels[channelName] = channel;
+            }
+        };
+
+        for (let i=0; i<this._geometry.nseg; i++) {
+            this.addSegment();
+        }
+}
+  // Set _ val
+  // Set every seg
+
+Section.prototype = {
+    get geometry() { return this.params('geometry'); },
+    get biophysics() { return this.params('biophysics'); },
+    get channels() { 
+      let channels = {};
+      let segChannels = this.segments.map(x=>x.channels || {});
+      for (let channelName in this._channels) {
+          let newChannel = extractParams(segChannels, channelName);
+          channels[channelName] = new Channel(channelName, newChannel);
+      }
+      return channels; 
+    }
+};
+
+Section.prototype.type = "Section";
+
+const defaultSections = function() {
+    return [
+    {"name": "Soma", "gid": 1, "_geometry": {"L": 12, "diam": 12},
+     "_channels": getChannels(['hh'])},
+    {"name": "Axon", "gid": 2, "_geometry": {"L": 200, "diam": 1},
+     "_channels": getChannels(['hh']), "parent": 1},
+    {"name": "Dendrite 1", "gid": 3, "_geometry": {"L": 200, "diam": 1},
+     "_channels": getChannels(['pas']), "parent": 1},
+    ];
+};
+
+class Neuron {
+        constructor(name, gid, x=null, y=null, color=null, 
+                    sections = null) {
+             this.gid = gid || 0;
+             this.name = name || "neuron_0";
+             this.x = x || "150";
+             this.y = y || "75";
+             this.color = color || colors[0];
+             this.sections = [];
+             sections = sections || defaultSections();
+             for (var s of sections) {
+                let sec = new Section(s.name, s.gid, s._geometry,
+                                      s._biophysics, s._channels,
+                                      s.parent);
+                console.log(sec);
+                this.sections.push(sec);
+             }
+                // [
+                //     new Section('Soma', 1, new Geometry(12,12), new Biophysics(), ),
+                //     new Section('Axon', 2, new Geometry(200,1), new Biophysics(), getChannels(['hh']), 1),
+                //     new Section('Dendrite 1', 3, new Geometry(200,1), new Biophysics(), getChannels(['pas']), 1)
+                // ];
+
+
+        this.data = function() {
+            let out = {
+                gid: this.gid,
+                name: this.name,
+                x: this.x,
+                y: this.y,
+                sections: this.sections.map(x=> x.data())
+            };
+            return out;
+        };
+
+        this.nameSection = function(parent) {
+            let parentSec = this.sections.filter(x=>x.gid==parent)[0];
+            let otherChildren = this.sections.filter(x=>x.parent == parent);
+            let base;
+            if (parentSec.parent == null) {
+                base = "Dendrite";
+                otherChildren = this.sections.filter(x=>x.name.startsWith("Dendrite"));
+            } else {
+                base = parentSec.name;
+            }
+            let name = base + "_" + (otherChildren.length + 1);
+            return name;
+        };
+    }
 }
 
+// new (Function.prototype.bind.apply(Cls, arguments));
 
-// Bumped from https://gist.github.com/igodorogea/4f42a95ea31414c3a755a8b202676dfd
-
-function niceNum (range, round) {
-    var exponent = Math.floor(Math.log10(range));
-    var fraction = range / Math.pow(10, exponent);
-    var niceFraction;
-
-    if (round) {
-      if (fraction < 1.5) niceFraction = 1;
-      else if (fraction < 3) niceFraction = 2;
-      else if (fraction < 7) niceFraction = 5;
-      else niceFraction = 10;
-    } else {
-      if (fraction <= 1) niceFraction = 1;
-      else if (fraction <= 2) niceFraction = 2;
-      else if (fraction <= 5) niceFraction = 5;
-      else niceFraction = 10;
-    }
-
-    return niceFraction * Math.pow(10, exponent);
-  }
-
-function niceTicks(maxTick) {
-    var spacing = niceNum(maxTick / 9, true)
-    var steps = Math.ceil(maxTick / spacing)
-    var ticks = []
-    for (var i=0; i <= steps; i++) {
-        ticks.push(i * spacing)
-    }
-    return ticks
-}

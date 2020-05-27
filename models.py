@@ -168,46 +168,82 @@ class Section(nrn.Section):
     >>> apical = Section(L=600, diam=2, nseg=5, mechanisms=[leak],
     ...                  parent=soma, connection_point=DISTAL)
     """
-    def __init__(self, name="", L=100, diam=10, nseg=1, Ra=100, cm=1,
-                 mechanisms=None, parent=None, connection_point=DISTAL,
-                 cell=None):
+    def __init__(self, gid, name="", geometry=None, biophysics=None,
+                 channels=None, parent=None, connection_point=DISTAL,
+                 cell=None, segments=None):
         nrn.Section.__init__(self, name=name, cell=cell)
+        self.gid = gid
         self.name = name
-        self.set_geometry(L, diam, nseg)
+        self._setup_geometry(**geometry or {})
         # set cable properties
-        self.Ra = Ra
-        self.cm = cm
+        self._setup_biophysics(**biophysics or {})
         # connect to parent section
         if parent:
             self.connect(parent, connection_point, PROXIMAL)
         # add ion channels
-        mechanisms = mechanisms or []
-        for mechanism in mechanisms:
-            mechanism.insert_into(self)
+        self.add_mechanisms(channels)
 
-        self.records = {}
+        self.setup_segments(segments)
 
-    def set_geometry(self, L, diam, nseg):
-        # set geometry
+        self._setup_recording()
+
+        self.print()
+
+    def _setup_geometry(self, L=100, diam=1, nseg=1):
+        """Set basic geometric properties"""
         self.L = L
-        self.diam = diam
-        self.nseg = nseg
+        self.nseg = int(nseg)
+        # TODO: superfluous? Remove?
+        if diam is not None:
+            self.diam = diam
 
-    def add_synapses(self, label, type, locations=[0.5], **parameters):
-        if hasattr(self, label):
-            raise Exception("Can't overwrite synapse labels (to keep things simple)")
-        synapse_group = []
-        for location in locations:        
-            synapse = getattr(h, type)(location, sec=self)
-            for name, value in parameters.items():
-                setattr(synapse, name, value)
-            synapse_group.append(synapse)
-        if len(synapse_group) == 1:
-            synapse_group = synapse_group[0]
-        setattr(self, label, synapse_group)
-    add_synapse = add_synapses  # for backwards compatibility
+    def _setup_biophysics(self, Ra=100, cm=1):
+        """Set basic biophysics properties"""
+        self.Ra = Ra
+        if cm is not None:
+            self.cm = cm
+
+    def setup_segments(self, segments):
+        """Set specific parameters per segment"""
+        assert self.nseg == len(segments)
+        for i, seg in enumerate(self):
+            seg_params = segments[i]
+            seg.diam = seg_params['geometry']['diam']
+            seg.cm = seg_params['biophysics']['cm']
+            for name, params in seg_params['channels'].items():
+                channel = getattr(seg, name)
+                for attr, val in params.items():
+                    setattr(channel, attr, val)
+
+    def print(self):
+        """Pprint section's psection method"""
+        pprint(self.psection())
+
+    def add_mechanisms(self, mechanisms):
+        """Create Mechanism objects from params and insert"""
+        self.mechanisms = []
+        mechanisms = mechanisms or {}
+        for name, params in mechanisms.items():
+            mech = Mechanism(name, **params)
+            mech.insert_into(self)
+            self.mechanisms.append(mech)
+
+    # def add_synapses(self, label, type, locations=[0.5], **parameters):
+    #     if hasattr(self, label):
+    #         raise Exception("Can't overwrite synapse labels (to keep things simple)")
+    #     synapse_group = []
+    #     for location in locations:
+    #         synapse = getattr(h, type)(location, sec=self)
+    #         for name, value in parameters.items():
+    #             setattr(synapse, name, value)
+    #         synapse_group.append(synapse)
+    #     if len(synapse_group) == 1:
+    #         synapse_group = synapse_group[0]
+    #     setattr(self, label, synapse_group)
+    # add_synapse = add_synapses  # for backwards compatibility
 
     def record_spikes(self, threshold=-30):
+        """Setup recording for action potentials"""
         self.spiketimes = h.Vector()
         self.spikecount = h.APCount(0.5, sec=self)
         self.spikecount.thresh = threshold
@@ -215,6 +251,7 @@ class Section(nrn.Section):
         self.records['spikes'] = self.spiketimes
 
     def _setup_recording(self):
+        self.records = {}
         self.records['v'] = h.Vector().record(self(0.5)._ref_v)
         data = self.psection()
         for ion, vals in data['ions'].items():
@@ -260,14 +297,13 @@ class Cell(object):
         self.syns = []
         self.data = {}
         self.sections = {}
+        self.roots = []
         self.vectors = []
 
         logger.info('setting up morphology')
         # Setup morphology and biophysics
         self._setup_morphology()
-        self.all = self.soma.wholetree()
-        logger.info('setting up biophysics')
-        self._setup_biophysics()
+        self.all = self.root.wholetree()
 
         logger.info('setting position')
         # set position of cell
@@ -276,37 +312,17 @@ class Cell(object):
         self._rotate_z(theta)
         self._set_position(x, y, z)
 
-        self._setup_recording()
-
     def _setup_morphology(self):
         """Placeholder method"""
-        self.soma = None
-        self.axon = None
-        self.dendrites = []
-        self.syn = None
-
-    def _setup_biophysics(self):
-        """Placeholder method"""
         pass
-
-    def _setup_recording(self):
-        """Create recording variables for the cell"""
-        # Time
-        self.data['t'] = h.Vector().record(h._ref_t)
-        # Soma Voltage
-        # self.data['soma_v'] = self.soma.records['v']
-
-        # Spike times
-        # self.soma.record_spikes()
-        # self.data['spike_times'] = self.soma.spiketimes
 
     def __repr__(self):
         return '{}[{}]'.format(self.name, self._gid)
 
     def __getattribute__(self, attr):
         """Allow dot notation access to sections"""
+        # TODO: Implement
         return object.__getattribute__(self, attr)
-             # self.sections.get(attr, )
 
     def _set_position(self, x, y, z):
         """Set the cell's 3d position in space."""
@@ -343,29 +359,14 @@ class Cell(object):
                 cell_record[name] = glial.compress_array(record.as_numpy())
                 data[key] = cell_record
 
-        #  Reorganize spike times to one-hot time format
-        # TODO: Move to sections. Property?
-        # spike_times = data['spike_times'].to_python()
-        # time = glial.compress_array(np.array(data['t']), frmt=None)
-        # spikes = np.zeros(len(time))
-        # for spike in spike_times:
-        #     closest = np.argmin(abs(time - spike))
-        #     spikes[closest] = 1
-
-        # recordings = {
-            # "Spike Times": list(spikes),
-            # "Soma voltage": glial.compress_array(data['soma_v'].to_python()),
-            # "cai": data['cai'].to_python(),
-            # "cao": data['cao'].to_python(),
-            # "ica": data['ica'].to_python(),
-            # "ik": data['ik'].to_python(),
-            # "ina": data['ina'].to_python(),
-            # "ek": data['ek'].to_python(),
-            # "ena": data['ena'].to_python(),
-            # "Dendrite voltage": data['dend_v'].to_python(),
-            # "Synapse current": data['syn_i'].to_python()
-            # }
         return data
+
+    def get_sec(self, gid):
+        """Retrieve section by gid or return None"""
+        candidates = [sec for sec in self.sections.values() if sec.gid == gid]
+        if len(candidates) == 1:
+            return candidates[0]
+        return None
 
 
 class SimpleNeuron(Cell):
@@ -375,93 +376,46 @@ class SimpleNeuron(Cell):
         """To be improved"""
         return f"section-{len(self.sections) + 1}"
 
-    def _add_section(self, params, parent=None):
-        # TODO: flexible defaults
-        length = params.get('L', 12.6157)
-        diam = params.get('diam', 12.6157)
-        nseg = params.get('nseg', 1)
-        name = params.get('name', self.name_sec())
+    def _add_section(self, params):
+        """Add a section to the cell"""
+        sec = Section(cell=self, **params)
+        self.sections[sec.name] = sec
 
-        sec = Section(name=name, L=length, diam=diam, nseg=nseg,
-                      parent=parent, cell=self)
-
-        self.sections[name] = sec
+        # add to roots if no parent
+        if params['parent'] is None:
+            self.roots.append(sec)
 
         return sec
-
-    def _add_channels(self, sec_name, sec_params=None):
-        # TODO: move to sec or merge with Mechanism
-        logger.info('adding channels for %s', sec_name)
-        if sec_params is None:
-            sec_params = self.params.get(sec_name, {})
-        sec = self.sections[sec_name]
-        for channel in sec_params.get("channels", []):
-            sec.insert(channel["name"])
-            for seg in sec:
-                mech = seg.__getattribute__(channel["name"])
-                for param in channel.get("parameters", []):
-                    setattr(mech, param["name"], param["value"])
-                for (k, v) in channel.get("assigned", {}).items():
-                    setattr(mech, k, v)
-                for (k, v) in channel.get("ions", {}).items():
-                    setattr(seg, k, v)
 
     def _setup_morphology(self):
-        # soma
-        logger.info('setting up soma')
-        soma_params = self.params.get('soma', {})
-        soma_params['name'] = 'soma'  # TODO: Check elsewhere
-        self.soma = self._add_section(soma_params)
+        """Create sections from provided parameters"""
+        sections = self.params.get('sections', [])
+        for section in sections:
+            logger.info('setting up %s', section['name'])
+            print(section)
 
-        # axon
-        logger.info('setting up axon')
-        axon_params = self.params.get('axon', {})
-        axon_params['name'] = 'axon'
-        self.axon = self._add_section(axon_params, self.soma)
+            # Retrieve parent section and pass to constructor
+            if 'parent' in section and section['parent']:
 
-        # dendrites
-        dend_params = self.params.get('dendrites', [])
-        self.dendrites = []
-        for dend in dend_params:
-            dend['name'] = f"dendrite-{dend['gid']}"
-            logger.info('setting up %s', dend['name'])
-            dendrite = self._add_section(dend, self.soma)
-            self.dendrites.append(dendrite)
+                parent = self.get_sec(section['parent'])
+                if parent is None:
+                    msg = f"Parent for section '{section['name']}': "
+                    msg += f"'{section['parent']}' does not exist"
+                    raise ValueError(msg)
+                section['parent'] = parent
+            else:
+                section['parent'] = None
+            self._add_section(section)
 
-    def _setup_biophysics(self):
-        # Retrieve param dicts if provided
-        # TODO: move all to sections variable
-        params = self.params.get('general', {})
+        # Ensure exactly one root
+        if not self.roots:
+            raise ValueError("No root sections. At least one section" +
+                             " must have no parent.")
+        if len(self.roots) > 1:
+            raise ValueError("Only 1 section can have no parents, " +
+                             "not %s: %s", len(self.roots), self.roots)
 
-        for sec in self.all:
-            sec.Ra = params.get('Ra', 100)
-            sec.cm = params.get('cm', 1)
-
-        for sec in self.sections.keys():
-            self._add_channels(sec)
-
-        # TODO: avoid doing dendrite separately!
-        dend_params = self.params.get('dendrites', [])
-        for dend in dend_params:
-            name = f"dendrite-{dend['gid']}"
-            self._add_channels(name, dend)
-
-    def _setup_recording(self):
-        """Instruct sections to create recordings"""
-        # TODO: Definitely consolidate section setup into one function.
-        # Makes sense so we can enforce order
-        for sec in self.sections.values():
-            sec._setup_recording()
-
-
-    def getSection(self, section):
-        """Return a section of the cell using a string key"""
-        if section in ['soma', 'axon']:
-            sec = self.__getattribute__(section)
-        elif section.startswith('dendrite-'):
-            index = int(section[9:]) - 1
-            sec = self.dendrites[index]
-        return sec
+        self.root = self.roots[0]
 
     def add_stimulus(self, section, loc, stim_type, name, parameters):
         """Add a new Point Process to the cell.
@@ -478,7 +432,7 @@ class SimpleNeuron(Cell):
             Parameters for stim type
 
         """
-        sec = self.getSection(section)
+        sec = self.sections[section]
         seg = sec(loc)
 
         if stim_type == "ACClamp":
@@ -499,16 +453,18 @@ class Simulation:
         Cells to be run in the simulation.
     """
 
-    def __init__(self, cells=None):
+    def __init__(self, cells=None, celsius=6.3):
         """Initialises simulation"""
         self.cells = cells or {}
         self.timevec = h.Vector().record(h._ref_t)
         self.ncs = []
         self.nc_spikes = []
+        h.celsius = celsius
         logger.info("simulation cells: : %s", self.cells)
 
     @property
     def stimuli(self):
+        """Return a list of all stimuli for all sections"""
         stims = []
         for cell in self.cells:
             stims += cell.stimuli
@@ -529,45 +485,38 @@ class Simulation:
         for mech in ['cagk', 'hh2', 'CaT', 'kd', 'kext', 'cadifus']:
             data[mech] = glial.get_mech_globals(mech)
 
-        # for gid, cell in self.cells.items():
-            # pprint(cell.soma.psection())
-
         h.continuerun(runtime * ms)
-
-        # for gid, cell in self.cells.items():
-            # pprint(cell.soma.psection())
 
     def add_connection(self, source, target, delay, weight, threshold,
                        section, loc, tau, e):
         """Add a connection to the model"""
         # Get target section
-        sec = target.getSection(section)
+        sec = target.get_sec(section)
         # Add synapse
         syn = h.ExpSyn(sec(loc))
         syn.tau = tau * ms
         syn.e = e
         target.syns.append(syn)
 
-        nc = h.NetCon(source.axon(1)._ref_v, syn, sec=source.axon)
-        nc.weight[0] = weight
-        nc.delay = delay
-        nc.threshold = threshold
+        # TODO: Select con source
+        source_sec = source.sections.get("Axon", source.root)
+        con = h.NetCon(source_sec(1)._ref_v, syn, sec=source_sec)
+        con.weight[0] = weight
+        con.delay = delay
+        con.threshold = threshold
         nc_spike = h.Vector()
-        nc.record(nc_spike)
+        con.record(nc_spike)
         self.nc_spikes.append(nc_spike)
 
-        self.ncs.append(nc)
+        self.ncs.append(con)
 
     @property
     def output(self):
         """Format output of simulation for plotting"""
         output = {}
-        timevec = glial.compress_array(self.timevec.as_numpy())
-        # time = [round(tp) for tp in timevec]
-        time = timevec
-        output['t'] = time
+        output['t'] = glial.compress_array(self.timevec.as_numpy())
 
-        # Output spikes TODO
+        # TODO Output spikes
         output['nc_spikes'] = []
         for nc_spike in self.nc_spikes:
             output['nc_spikes'].append(nc_spike.to_python())
@@ -575,26 +524,19 @@ class Simulation:
         # Views
         views = {}
         amp = {}
-        for gid, cell in self.cells.items():
+        for cell in self.cells.values():
             for key, record in cell.records.items():
                 sim_record = views.get(key, {})
                 sim_record[cell.name] = record
                 views[key] = sim_record
 
             cell_stims = {}
-            for i, stim in enumerate(cell.stimuli):
+            for stim in cell.stimuli:
                 rec = glial.compress_array(stim.records['amp'].as_numpy())
                 cell_stims[stim.name] = rec
             amp[cell.name] = cell_stims
 
         views['amp'] = amp
-
-        # amp = {}
-        # for stim in self.stimuli:
-        #     stim_record = {}
-        #     stim_record[stim.name] = stim.records['amp']
-        #     amp[stim.name] = stim_record
-        # views['amp'] = amp
 
         output['views'] = views
         return output
