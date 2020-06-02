@@ -15,6 +15,7 @@ var app = new Vue({
             load: false,
             editor: false,
             monitor: false,
+            tutorial: false
         },
         load: {
             selected: "",
@@ -35,6 +36,8 @@ var app = new Vue({
             }
 
         },
+        tutorial: {},
+        tutorials: tutorials,
         monitor: {
             chart: false,
             visible: ["Neuron 1_Soma"],
@@ -160,20 +163,36 @@ var app = new Vue({
         },
 
         xticks: function() {
-            return niceTicks(this.maxTime)
+            return niceTicks(this.maxTime);
         },
 
         maxTick: function() {
             return this.xticks.pop();
+        },
+
+        tutorialStep: function() {
+            if (this.tutorial.steps) {
+                return this.tutorial.steps[this.tutorial.step];
+            }
+            return false;
+        },
+
+        tutorialPercentage: function() {
+            let frac = this.tutorial.step / (this.tutorial.steps.length - 1);
+            return Math.round(frac * 100);
         }
 
     },
     methods: {
         // Utils
 
+        percentage: function(frac) {
+            return Math.round(frac * 100);
+        },
+
         getMaxGid: function(component) {
             if (typeof(component) == "string") {
-                component = this[component]
+                component = this[component];
             }
             let gids = component.map(x => parseInt(x.gid));
             gids.push(0)
@@ -203,9 +222,10 @@ var app = new Vue({
         },
 
         updateEditorSegments: function(e){
+            console.log("Updating editor segments...")
             let val = e.target.value;
             for (let sec of this.editor.selection) {
-                Vue.set(sec.geometry, 'nseg', val);
+                Vue.set(sec._geometry, 'nseg', val);
                 sec.updateSegments();
             }
         },
@@ -502,6 +522,7 @@ var app = new Vue({
             let y = (gid * 2) + 75;
             let neuron = new Neuron(name, gid, x, y, color, sections);
             this.neurons.push(neuron);
+            this.monitor.visible.push(neuron.name + '_Soma');
 
             setTimeout(function() {
                 makeDraggable();
@@ -609,13 +630,13 @@ var app = new Vue({
 
         loadSimulation: function() {
             this.save.filename = this.load.selected;
-            let url = '/spyke/load'
+            let url = '/spyke/load';
             let csrftoken = Cookies.get('csrftoken');
             let headers = {'X-CSRFToken': csrftoken};
-            let data = {'filename': this.load.selected}
+            let data = {'filename': this.load.selected};
             axios.post(url,data,{headers: headers})
               .then(response => {
-                  console.log(response.data)
+                  console.log(response.data);
                   let conf = response.data;
                   let keys = Object.keys(conf);
                   this.neurons = [];
@@ -887,12 +908,52 @@ var app = new Vue({
                 setTimeout(function() {
                     let idx = app.toasts.map(x=>x.gid).indexOf(gid);
                     app.toasts.splice(idx, 1);
-                }, 5000)
+                }, 5000);
             }
         },
 
         toastObj: function(message) {
             this.addToast(message.title, message.subtitle, message.message, message.messages, message.level);
+        },
+
+        // Tutorials
+
+        tutorialNext: function() {
+            this.tutorial.step ++;
+            $('.flashing').removeClass('flashing');
+            for (var f of this.tutorialStep.flashing) {
+                $(f).addClass('flashing');
+            }
+            if (!(this.tutorialStep.btn)) {
+                this.tutorialPoll(this.tutorialStep.condition);
+            }
+        },
+
+        tutorialFinish: function() {
+            $('.flashing').removeClass('flashing');
+            this.closePopups();
+        },
+
+        tutorialPoll: function(condition) {
+            console.log("Polling...");
+            if (condition()) {
+                console.log("Advancing...");
+                this.tutorialNext();
+            } else {
+                setTimeout(function(){app.tutorialPoll(condition);}, 500);
+            }
+        },
+
+        changeTutorial: function(tut) {
+            this.tutorial = tut;
+            this.closePopups();
+            this.popups.tutorial = true;
+            $('#tutorial-list-container').removeClass('show');
+            this.$nextTick(function(){
+                $( "#tutorial-popup-container" ).draggable({
+                      handle: "#tutorial-header"
+                    });
+            });
         }
 
         
@@ -901,8 +962,8 @@ var app = new Vue({
         // Load neuron svg 
         var response = $.get("/static/spyke/neuron-grey-prod.svg").then(function(xml) {
             app.svgData = xml.documentElement;
-            app.addNeuron();
-            app.addStimulus('IClamp')
+            // app.addNeuron();
+            // app.addStimulus('IClamp')
         });
 
         // Get saved files
@@ -1165,6 +1226,8 @@ function axonExtend() {
 function toggleHideNext(el) {
     $(el).toggleClass('show')
     $(el).next().collapse('toggle');
+    // TODO: hacky fix, replace
+    app.$forceUpdate();
 }
 
 window.onload = function() {

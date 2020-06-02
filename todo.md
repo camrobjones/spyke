@@ -5,9 +5,26 @@ Next up
 
 
 - PUSH
+    - cleanup saved
+
+- Tutorial
+    - Threshold
+        - duration
+    - 2 tutorials
+
+    - substeps
+    - Simulation run conditions
+    - teardown and setup steps
+        - teardown on close, setup on open
+    - Panel
+        - Complete signs
+        - Progress bars
+    - Store on user db
 
 
 - Check NiA Simulations
+    - Jo laptop
+
 - 201 Notes
 
 
@@ -19,8 +36,6 @@ Next up
     - H-current
 
 - Write up report
-
-- Tutorials
 
 
 - Fix vix toggle line

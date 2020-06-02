@@ -15,6 +15,41 @@
         <div id='header-container'>
             <h1 id='title'>Spyke</h1>
 
+            <!-- Tutorial -->
+            <div id='tutorial-container'>
+                <div id='tutorial-header-container' onclick="toggleHideNext(this)">
+                    <div id='tutorial-bar-header'>
+                        <h5 id="tutorial-header-text">Tutorials</h5>
+
+                        <div id='current-tutorial'>
+                        <span v-if='tutorial.title' id='current-tutorial-text'>
+                            [[tutorial.title]]
+                        </span>
+                        <span v-else id='current-tutorial-text' class='disabled'>
+                            No tutorial selected
+                        </span>
+
+                    </div>
+                    </div>
+                    
+                    <div id='tutorial-chevron-container'>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+
+                <div id='tutorial-list-container'>
+                    <ul id='tutorial-list' class="mdc-list mdc-list--two-line">
+                      <li class="mdc-list-item" tabindex="0" v-for='tut in tutorials'
+                          @click="changeTutorial(tut)">
+                        <span class="mdc-list-item__text">
+                          <span class="mdc-list-item__primary-text tutorial-list-title">[[tut.title]]</span>
+                          <span class="mdc-list-item__secondary-text">[[tut.step]]/[[tut.steps.length - 1]] ([[percentage(tut.step/(tut.steps.length - 1))]]% complete)</span>
+                        </span>
+                      </li>
+                    </ul>
+                </div>
+            </div>
+
             <div id='control-container'>
 
                 <!-- Save -->
@@ -59,6 +94,7 @@
 
                 <div id='sidebar-tabs-container'>
                     <div class='sidebar-tab'
+                         id="sidebar-tab-simulation"
                          @click='changeSettingsTab("simulation")'
                          v-bind:class="{ active: settingsTab=='simulation' }">
                         <h4 class='sidebar-tab-title'>
@@ -67,6 +103,7 @@
                     </div>
 
                     <div class='sidebar-tab'
+                         id="sidebar-tab-stimuli"
                          @click='changeSettingsTab("stimuli")'
                          v-bind:class="{ active: settingsTab=='stimuli' }">
                         <h4 class='sidebar-tab-title'>
@@ -75,6 +112,7 @@
                     </div>
 
                     <div class='sidebar-tab'
+                         id="sidebar-tab-neuron"
                          @click='changeSettingsTab("neuron")'
                          v-bind:class="{ active: settingsTab=='neuron' }">
                         <h4 class='sidebar-tab-title'>
@@ -83,6 +121,7 @@
                     </div>
 
                     <div class='sidebar-tab'
+                         id="sidebar-tab-connections"
                          @click='changeSettingsTab("connections")'
                          v-bind:class="{ active: settingsTab=='connections' }">
                         <h4 class='sidebar-tab-title'>
@@ -133,7 +172,9 @@
 
                         <div v-for='(stim, index) in stimuli' class='config-item-container'>
 
-                            <div class='config-item-header-container' onclick="toggleHideNext(this);">
+                            <div class='config-item-header-container'
+                                 onclick="toggleHideNext(this);"
+                                 :id="'stimulus-header-container-'+index">
                                 <h5 class='config-item-header'>
                                 [[ stim.name ]]
                                 </h5>
@@ -151,11 +192,11 @@
 
                                 <div class="form-group row sidebar-input-group">
                                     <div class='col-6'>
-                                        <label class='row sidebar-input-label' for="stim-neuron">Neuron</label>
+                                        <label class='row sidebar-input-label' :for="'stim-neuron-'+index">Neuron</label>
                                         <small id="stim-neuron-help" class="form-text text-muted sidebar-input-help row">Neuron to attach stim to</small>
                                     </div>
                                     <div class='col-6'>
-                                        <select class="form-control" id="stim-neuron" v-model="stim.neuron">
+                                        <select class="form-control" :id="'stim-neuron-'+index" v-model="stim.neuron">
                                             <option v-for='neuron in neurons' v-bind:value='neuron.gid'>
                                                 Neuron [[neuron.gid]]
                                             </option>
@@ -165,11 +206,11 @@
 
                                 <div class="form-group row sidebar-input-group">
                                     <div class='col-6'>
-                                        <label class='row sidebar-input-label' for="stim-sec">Section</label>
+                                        <label class='row sidebar-input-label' :for="'stim-sec-'+index">Section</label>
                                         <small id="stim-sec-help" class="form-text text-muted sidebar-input-help row">Section to attach stim to</small>
                                     </div>
                                     <div class='col-6'>
-                                        <select class="form-control" id="stim-sec" v-model="stim.section">
+                                        <select class="form-control" :id="'stim-sec-'+index" v-model="stim.section">
                                             <option v-for='sec in getSections(stim.neuron)' v-bind:value='sec.name'>
                                                 [[sec.name]]
                                             </option>
@@ -178,22 +219,22 @@
                                 </div>
 
                                 <div class="form-group row sidebar-input-group">
-                                    <div class='col-8'>
+                                    <div class='col-7'>
                                         <label for="stim-loc" class='row sidebar-input-label'>Location</label>
-                                        <small id="stim-locHelp" class="form-text text-muted sidebar-input-help row">Location of stimulus on segment</small>
+                                        <small id="stim-locHelp" class="form-text text-muted sidebar-input-help row">Location on segment</small>
                                     </div>
-                                    <div class='col-4'>
+                                    <div class='col-5'>
                                         <input type="number" class="form-control sidebar-input-number" id="stim-loc" v-model="stim.loc" min="0" max="1" step="0.1">
                                     </div>
                                 </div>
 
                                 <div class="form-group row sidebar-input-group" v-for='opt in stim.parameters'>
-                                    <div class='col-8'>
-                                        <label v-bind:for="opt.name" class='row sidebar-input-label'>[[opt.title]]</label>
+                                    <div class='col-7'>
+                                        <label v-bind:for="opt.name + '-' + index" class='row sidebar-input-label'>[[opt.title]]</label>
                                         <small v-bind:id="opt.name + 'Help'" class="form-text text-muted sidebar-input-help row" v-html="opt.help"></small>
                                     </div>
-                                    <div class='col-4'>
-                                        <input type="number" class="form-control sidebar-input-number" v-bind:id="opt.attribute" v-model="opt.value" v-bind:step="opt.step">
+                                    <div class='col-5'>
+                                        <input type="number" class="form-control sidebar-input-number" v-bind:id="opt.name  + '-' + index" v-model.number="opt.value" v-bind:step="opt.step">
                                     </div>
                                 </div>
 
@@ -613,7 +654,10 @@
 
                         <div class='monitor-tabs-container'>
                             <div v-for='view in views' class='monitor-tab-container'>
-                                <div class='monitor-tab' v-bind:class="{ active: monitorTab == view}" @click="changeMonitorTab(view)">
+                                <div class='monitor-tab'
+                                    v-bind:class="{ active: monitorTab == view}"
+                                    @click="changeMonitorTab(view)"
+                                    :id="'monitor-tab-'+view">
                                     <h4 class='monitor-tab-title' v-html="(chartKey[view] || {}).label"></h4>
                                 </div>
                             </div>
@@ -1272,6 +1316,53 @@
         </div>
         <!-- End Editor Popup -->
 
+        <!-- Tutorial Popup -->
+        <div id='tutorial-popup-container' v-if="tutorialStep && popups.tutorial">
+            <div id='tutorial-popup' class='mdc-card'>
+                <div id='tutorial-header'>
+                    <div id='tutorial-title'>
+                        <span>[[tutorial.title]]</span>
+                        <div id='tutorial-close' @click="closePopups">
+                            <i class="fas fa-times" ></i>
+                        </div>
+                    </div>
+                    <div id='tutorial-header-inner'>
+                        <span>[[tutorialStep.header]]</span>
+                    </div>
+                </div>
+
+                <div id='tutorial-body' v-html="tutorialStep.body">
+                </div>
+
+                <div id='tutorial-buttons'>
+
+                    <div id='tutorial-progress-container'>
+                        <div id='tutorial-progress'>
+                            <div id='tutorial-progress-bar'
+                                 :style="{ width: tutorialPercentage + '%'}">
+                            </div>
+                        </div>
+                        <span id='tutorial-progress-text'>
+                        [[tutorial.step]]/[[tutorial.steps.length - 1]] ([[tutorialPercentage]] %)
+                        </span>
+                    </div>
+                    <button id='tutorial-next'
+                            v-if="tutorial.step == tutorial.steps.length - 1" 
+                            @click="tutorialFinish">
+                            Finish
+                    </button>
+                    <button id='tutorial-next'
+                            v-else-if="tutorialStep.btn" 
+                            @click="tutorialNext"
+                            :disabled="!(tutorialStep.condition())">
+                            Next
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+
     </div>
 
     <!-- Toast Container -->
@@ -1309,6 +1400,8 @@
 <script src="{% static 'spyke/data.js' %}"> </script>
 
 <script src="{% static 'spyke/aux.js' %}"> </script>
+
+<script src="{% static 'spyke/tutorials.js' %}"> </script>
 
 <script src="{% static 'spyke/interface.js' %}"> </script>
 

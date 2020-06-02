@@ -164,7 +164,7 @@ function stimuli() {
                 {"name": "dur",
                  "title": "Duration (ms)",
                  "help": "Duration of stimulus",
-                 "value": 1,
+                 "value": 5,
                  "step": 1},
 
                  {"name": "delay",
@@ -478,10 +478,13 @@ function ChannelParameter(channel, name, value) {
 }
 
 function Channel(name, params = null) {
+    console.log('creating Channel: ', name);
+    console.log(params);
     params = params || {};
     let data = channelData[name];
     for (param of Object.values(data.parameters)) {
         // Take provided param if available
+        console.log(params[param.name]);
         if (param.name in params) {
             this[param.name] = params[param.name];
         } else {
@@ -591,7 +594,7 @@ function Section(name, gid, geometry, biophysics,
         this.gid = gid;
         this._geometry = Object.assign(new Geometry(), geometry);
         this._biophysics = Object.assign(new Biophysics(), biophysics);
-        channels = channels || {};
+        channels = Object.assign({},channels);
         this._channels = {};
         for (var key in channels) {
             let newChannel = new Channel(key, channels[key]);
@@ -642,7 +645,7 @@ function Section(name, gid, geometry, biophysics,
         this.addSegment = function() {
             let segDiam = this._geometry.diam.valueOf();
             let cm = this._biophysics.cm.valueOf();
-            let segChannels = Object.assign({}, this.channels);
+            let segChannels = Object.assign({}, this._channels);
             let segment = new Segment(this, segDiam, cm, segChannels);
             this.segments.push(segment);
         };
