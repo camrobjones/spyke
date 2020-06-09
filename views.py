@@ -98,19 +98,15 @@ def simulation(request):
         logger.debug("connection: %s", connection)
         source_gid = connection['source']
         target_gid = connection['target']
-        delay = connection['delay']
-        weight = connection['weight']
-        threshold = connection['threshold']
+        netcon = connection['con']
         section = connection['section']
         loc = connection['loc']
-        tau = connection['tau']
-        e = connection['e']
+        syn_data = connection['syn_data']
 
         if source_gid and target_gid:
             source = cells[source_gid]
             target = cells[target_gid]
-            sim.add_connection(source, target, delay, weight, threshold,
-                               section, loc, tau, e)
+            sim.add_connection(source, target, section, loc, netcon, syn_data)
         else:
             msg = "Invalid source or target in connection {}"
             msg = msg.format(connection.get('gid', 'noGid'))

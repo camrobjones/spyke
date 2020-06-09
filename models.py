@@ -487,28 +487,33 @@ class Simulation:
 
         h.continuerun(runtime * ms)
 
-    def add_connection(self, source, target, delay, weight, threshold,
-                       section, loc, tau, e):
+    def add_connection(self, source, target, section, loc, netcon,
+                       syn_data):
         """Add a connection to the model"""
         # Get target section
         sec = target.get_sec(section)
         # Add synapse
-        syn = h.ExpSyn(sec(loc))
-        syn.tau = tau * ms
-        syn.e = e
+        syn = getattr(h, syn_data['name'])
+        syn = syn(sec(loc))
+        for param, val in syn_data['params'].items():
+            setattr(syn, param, val)
         target.syns.append(syn)
 
-        # TODO: Select con source
         source_sec = source.sections.get("Axon", source.root)
-        con = h.NetCon(source_sec(1)._ref_v, syn, sec=source_sec)
-        con.weight[0] = weight
-        con.delay = delay
-        con.threshold = threshold
-        nc_spike = h.Vector()
-        con.record(nc_spike)
-        self.nc_spikes.append(nc_spike)
-
-        self.ncs.append(con)
+        con_type = syn_data['con_type']
+        if con_type == 'netcon':
+            con = h.NetCon(source_sec(1)._ref_v, syn, sec=source_sec)
+            con.weight[0] = netcon['weight']
+            con.delay = netcon['delay']
+            con.threshold = netcon['threshold']
+            nc_spike = h.Vector()
+            con.record(nc_spike)
+            self.nc_spikes.append(nc_spike)
+            self.ncs.append(con)
+        elif con_type == 'pointer':
+            h.setpointer(source_sec(1)._ref_v, 'pre', syn)
+        else:
+            raise ValueError("Invalid connection type: {con_type}")
 
     @property
     def output(self):

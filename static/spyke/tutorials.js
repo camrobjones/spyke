@@ -113,7 +113,7 @@ const tutorial1 = {
             condition: function() {
                 let a1 = app.stimuli[0].parameters[2].value;
                 let a2 = app.stimuli[1].parameters[2].value;
-                return a1 > 0.1036 && a2 < 0.1036 && (a1 - a2) <=0.0011;},
+                return a1 >= 0.10362 && a2 < 0.10362 && (a1 - a2) <= 0.0011;},
             flashing: [],
             btn: true
         },
@@ -131,7 +131,7 @@ const tutorial1 = {
             condition: function() {
                 let a1 = app.stimuli[0].parameters[2].value;
                 let a2 = app.stimuli[1].parameters[2].value;
-                return a1 > 0.10057 && a2 < 0.10057 && (a1 - a2) <=0.0011;},
+                return a1 > 0.10057 && a2 < 0.10057 && (a1 - a2) <= 0.0011;},
             flashing: [],
             btn: true
         },

@@ -44,6 +44,34 @@ Update: 4th May 2020
     - Allows for effectively inhibitory connections
 - Save and load simulations
 
+Update: 1st June 2020
+
+- Neuron editor
+    - Access by clicking on the three dots next to neurons in the config panel > edit
+    - Change the number of segments in a neuron
+    - Change length, biophysics, and channel densities for segments
+    - Select multiple sections or segments at once
+    - Create parent-child relationships between segments
+
+- Duplicate Neurons
+    - Also found in the config menu
+    - Add a copy of the neuron to the simulation
+
+- Neuron colors
+    - Neurons now have settable colors which show up in the overview and the monitor
+    - Select the color swatch on a neuron's config menu item to change its color
+
+- Monitor options
+    - Click on the cog at the right hand side of the monitor bar to access
+    - Select neuron segments to show/hide them in the monitor traces
+    - Optionally lock and set axes
+
+- Tutorials
+    - Interactive tutorial
+    - Indicates components needed to complete steps
+    - Checks steps have been completed before advancing
+    - Tracks progress
+
 
 
 Roadmap

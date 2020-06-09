@@ -478,6 +478,7 @@
 
                             <div class='config-item-body-container collapse'>
 
+                                <!-- Source -->
                                 <div class="form-group sidebar-input-group row">
                                     <div class='col-4'>
                                         <label class='row sidebar-input-label' for="connection-source">Source</label>
@@ -493,7 +494,7 @@
                                     
                                 </div>
 
-                                <!-- `Section -->
+                                <!-- Target -->
                                 <div class="form-group sidebar-input-group row">
                                     <div class='col-4'>
                                         <label class='row sidebar-input-label' for="connection-target">Target</label>
@@ -509,7 +510,7 @@
                                         
                                 </div>
 
-                                <!-- Location -->
+                                <!-- Section -->
                                 <div class="form-group row sidebar-input-group">
                                     <div class='col-6'>
                                         <label class='row sidebar-input-label' for="con-sec">Section</label>
@@ -524,6 +525,7 @@
                                     </div>
                                 </div>
 
+                                <!-- Location -->
                                 <div class="form-group row sidebar-input-group">
                                     <div class='col-8'>
                                         <label for="con-loc" class='row sidebar-input-label'>Location</label>
@@ -534,13 +536,41 @@
                                     </div>
                                 </div>
 
-                                <div class="form-group row sidebar-input-group" v-for='opt in labels.connections'>
+                                <!-- Synapse Type -->
+                                <div class="form-group row sidebar-input-group">
+                                    <div class='col-4'>
+                                        <label class='row sidebar-input-label' for="con-sec">Synapse</label>
+                                        <small id="con-sec-help" class="form-text text-muted sidebar-input-help row">Type of synapse</small>
+                                    </div>
+                                    <div class='col-8'>
+                                        <select class="form-control" id="con-syn" v-model="connection.syn_data.name"
+                                        @change='changeSyn(index)'>
+                                            <option v-for='(syn, name) in labels.synapse' v-bind:value='name'>
+                                                [[syn.label]]
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Connection Options -->
+                                <div class="form-group row sidebar-input-group" v-for='opt in labels.connections' v-if='connection.syn_data.con_type == "netcon"'>
                                     <div class='col-7'>
                                         <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
                                         <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
                                     </div>
                                     <div class='col-5'>
-                                        <input type="number" class="form-control sidebar-input-number" v-bind:id="opt.attribute" v-model="connection[opt.attribute]">
+                                        <input type="number" class="form-control sidebar-input-number" v-bind:id="opt.attribute" v-model="connection.con[opt.attribute]">
+                                    </div>
+                                </div>
+
+                                <!-- Synapse options -->
+                                <div class="form-group row sidebar-input-group" v-for='opt in labels.synapse[connection.syn_data.name].params'>
+                                    <div class='col-7'>
+                                        <label v-bind:for="opt.attribute" class='row sidebar-input-label'>[[opt.label]]</label>
+                                        <small v-bind:id="opt.attribute + 'Help'" class="form-text text-muted sidebar-input-help row">[[opt.helptext]]</small>
+                                    </div>
+                                    <div class='col-5'>
+                                        <input type="number" class="form-control sidebar-input-number" v-bind:id="opt.attribute" v-model="connection.syn_data.params[opt.attribute]">
                                     </div>
                                 </div>
                             </div>

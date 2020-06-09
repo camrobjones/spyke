@@ -383,16 +383,22 @@ var app = new Vue({
         },
 
         addConnection: function() {
-            let copy = Object.assign({},connectionDefault);
+            let conn = connectionDefault();
 
-            copy.gid = this.getMaxGid('connections') + 1;
-            this.connections.push(copy);
+            conn.gid = this.getMaxGid('connections') + 1;
+            this.connections.push(conn);
         },
 
         removeConnection: function(index) {
             let connection = this.connections[index];
             $('#connection-' + connection.gid).remove();
             this.connections.splice(index,1);
+        },
+
+        changeSyn: function(index) {
+            let connection = this.connections[index];
+            let name = connection.syn_data.name;
+            connection.syn_data = newSynapse(name);
         },
 
         nameSection: function(neuronGid){
@@ -573,7 +579,7 @@ var app = new Vue({
         drawConnections: function() {
             for (let con of this.connections) {
                 if (con.source > 0 & con.target > 0) {
-                    drawConnection(con.source, con.target, con.gid)
+                    drawConnection(con.source, con.target, con.gid);
                 }
             }
         },

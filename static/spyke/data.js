@@ -79,6 +79,93 @@ const geometryLabels =
          'attribute': 'diam'}
     ];
 
+const synapseLabels = {
+    "AMPA": {
+        "label": "AMPA",
+        "con_type": "pointer",
+         "params": [
+            {'label': 'Threshold (mV)',
+             'helptext': 'Voltage threshold for AMPA release',
+             'attribute': 'Prethresh',
+             'value': 0},
+            {'label': 'Max Conductance (uS)',
+             'helptext': 'Maximum conductance',
+             'attribute': 'gmax',
+             'value': 0.1}
+             ]
+        },
+    "GABA": {
+        "label": "GABA-A",
+        "con_type": "pointer",
+         "params": [
+            {'label': 'Threshold (mV)',
+             'helptext': 'Voltage threshold for GABA release',
+             'attribute': 'Prethresh',
+             'value': 0},
+            {'label': 'Max Conductance (uS)',
+             'helptext': 'Maximum conductance',
+             'attribute': 'gmax',
+             'value': 0.1}
+             ]
+        },
+    "GABAB1": {
+        "label": "GABA-B",
+        "con_type": "pointer",
+         "params": [
+            {'label': 'Threshold (mV)',
+             'helptext': 'Voltage threshold for GABA release',
+             'attribute': 'Prethresh',
+             'value': 0},
+            {'label': 'Max Conductance (uS)',
+             'helptext': 'Maximum conductance',
+             'attribute': 'gmax',
+             'value': 0.1}
+             ]
+        },
+    "NMDA": {
+        "label": "NMDA",
+        "con_type": "pointer",
+         "params": [
+            {'label': 'Threshold (mV)',
+             'helptext': 'Voltage threshold for NMDA release',
+             'attribute': 'Prethresh',
+             'value': 0},
+            {'label': 'Max Conductance (uS)',
+             'helptext': 'Maximum conductance',
+             'attribute': 'gmax',
+             'value': 0.1}
+             ]
+        },
+    "ExpSyn": {
+         "label": "Exponential",
+         "con_type": "netcon",
+         "params": [
+            {'label': 'Tau (ms)',
+             'helptext': 'Decay time constant of synapse',
+             'attribute': 'tau',
+             'value': 2},
+            {'label': 'Reversal potential (mV)',
+             'helptext': 'Reversal potential of synapse',
+             'attribute': 'e',
+             'value': 0}
+             ]
+        }
+
+    };
+
+function newSynapse(name) {
+    let out = {
+        "name": name,
+        "con_type": synapseLabels[name].con_type,
+        params: {}
+    };
+    let labs = synapseLabels[name];
+    for (let param of labs.params) {
+        out.params[param.attribute] = param.value;
+    }
+    return out;
+}
+
 const connectionLabels = 
     [
         {'label': 'Delay (ms)',
@@ -89,13 +176,8 @@ const connectionLabels =
          'attribute': 'weight'},
          {'label': 'Threshold (mV)',
          'helptext': 'Voltage at which event triggered',
-         'attribute': 'threshold'},
-         {'label': 'Tau (ms)',
-         'helptext': 'Decay time constant of synapse',
-         'attribute': 'tau'},
-         {'label': 'Reversal potential (mV)',
-         'helptext': 'Reversal potential of synapse',
-         'attribute': 'e'}
+         'attribute': 'threshold'}
+         
     ];
 
 const biophysicsLabels = 
@@ -126,7 +208,8 @@ const optionLabels =
         geometry: geometryLabels,
         biophysics: biophysicsLabels,
         connections: connectionLabels,
-        simulation: simulationLabels
+        simulation: simulationLabels,
+        synapse: synapseLabels
     };
 
 const menus = {
@@ -540,18 +623,23 @@ function getStimulus(name, params = []) {
 // Default Components
 
 
-const connectionDefault = {
-    gid: 0,
-    source: 0,
-    target: 0,
-    delay: 5,
-    section: 'dendrite-1',
-    loc: 0.5,
-    weight: 0.05,
-    threshold: 10,
-    tau: 2,
-    e: 0
-};
+function connectionDefault() {
+    let data = {
+        gid: 0,
+        source: 1,
+        target: 0,
+        delay: 5,
+        section: 3,
+        loc: 0.5,
+        con: {
+            delay: 1,
+            weight: 0.05,
+            threshold: 0,
+        },
+        syn_data: newSynapse("AMPA")
+    };
+    return data;
+}
 
 function Segment(parent, diam=1, cm=1, channels=null) {
     this.geometry = {};

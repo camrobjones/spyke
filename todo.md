@@ -4,6 +4,10 @@ Next up
 -------
 
 
+- Synapses
+    - Push
+        - check model files
+
 - PUSH
     - cleanup saved
 
@@ -37,12 +41,20 @@ Next up
 
 - Write up report
 
-
+Bugs
 - Fix vix toggle line
 - Spike viz colors
 - Amplitude plot
 - Stop plots from relying on Soma
+- Viz rename neurons
 
+
+Questions
+---------
+Connections
+    - GABA-A doesn't explicitly model Cl
+    - Does it make sense to say the 'synapse type' is the transmitter?
+    - Should there be multiple 'synapse types' per connection?
 
 
 
@@ -87,6 +99,8 @@ Categorized
 - neurotransmitters (3)
 - Ion channels (3)
     - Assigned
+        - Point processes (GABA etc)
+    - Reversal potentials for individual ions
     - Globals (e.g. kbath)
         - Push to simulation tab?
 
@@ -125,6 +139,7 @@ Categorized
 - Phase portraits
 - Heatmaps
 - save/download plots
+- Better tooltips
 - plot multiple values in one view
 - Axes min-max jQueryUI range slider
 - get params from settings
@@ -136,6 +151,8 @@ Categorized
 - Chloride ion synapse (1)
 - Connection Matrix (1)
 - Draw on canvas (2)
+- Select source section/location
+- Double check units
 - Refactor connection code
 - More types of synapse
 
@@ -214,15 +231,7 @@ Dendrites:
 - Axon parameters
     - any channels? Myelination?
 
-- How to simulate application of neurotransmitter
-    - GABAergic/ AMDA etc
-
-- sections
-    - All equal? Privilege soma? Soma/axon/dendrites? Others?
-
-- Should viz show all segments? Mean or soma as opaque?
-
-- How to generate rhytmic behaviour in single neuron
+- How to generate rhythmic behaviour in single neuron
     - Increasing Na conductance seems to work
     - Constant IClamp doesn't
 
@@ -246,6 +255,7 @@ Later
     - Prevent delete soma
     - tests
     - Validate params frontend
+    - Check units
 
 - Layout
     - SVG elements stay in order while dragging
