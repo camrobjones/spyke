@@ -17,6 +17,10 @@ var app = new Vue({
             monitor: false,
             tutorial: false
         },
+        display: {
+            indicator:true,
+            matrix:false
+        },
         load: {
             selected: "",
         },
@@ -38,6 +42,7 @@ var app = new Vue({
         },
         tutorial: {},
         tutorials: tutorials,
+        state: {},
         monitor: {
             chart: false,
             visible: ["Neuron 1_Soma"],
@@ -401,6 +406,54 @@ var app = new Vue({
             connection.syn_data = newSynapse(name);
         },
 
+        getConStatus: function(a, b) {
+            if (a == b) {
+                return '-';
+            }
+            let cons = this.connections.filter(x=> x.source==a && x.target==b);
+                if (cons.length == 0) {
+                    return "0";
+                }
+                if (cons.length == 1) {
+                    let con = cons[0];
+                    return "1";
+                }
+                return "M";
+        },
+
+        selectConnection: function(a,b) {
+            console.log(`selecting connection: ${a}, ${b}`);
+            if (a == b) {
+                console.log("a == b, aborting");
+                return false;
+            }
+            // Get relevant connections
+            let cons = this.connections.filter(x=> x.source==a && x.target==b);
+            let con;
+            // If no connection exists: create it
+            if (cons.length == 0) {
+                this.addConnection();
+                // Get created connection (last element)
+                con = this.connections.slice(-1)[0];
+                con.source = a;
+                con.target = b;
+                this.drawConnections();
+            } else {
+                // select first applicable connection
+                con = cons[0];
+            }
+            // Focus connection
+            this.changeSettingsTab('connections');
+            this.$nextTick(function() {
+                $('.config-item-header-container').removeClass('show');
+                $('.config-item-body-container').removeClass('show');
+                let hid = "#con-header-" + con.gid;
+                let bid = "#con-body-" + con.gid;
+                $(hid).addClass('show');
+                $(bid).addClass('show');
+            });
+        },
+
         nameSection: function(neuronGid){
             let secNames = this.getSections(neuronGid).map(x=>x.name);
             for (n of ['Soma', "Axon", "Dendrite 1"]) {
@@ -503,6 +556,7 @@ var app = new Vue({
         },
 
         selectNeuron: function(gid) {
+            console.log('selecting neuron: ', gid);
             this.changeSettingsTab('neuron');
             this.$nextTick(function() {
                 $('.config-item-header-container').removeClass('show');
@@ -511,7 +565,7 @@ var app = new Vue({
                 let bid = "#neuron-body-" + gid;
                 $(hid).addClass('show');
                 $(bid).addClass('show');
-            })
+            });
         },
 
         // Add/remove neurons
@@ -704,6 +758,7 @@ var app = new Vue({
                       app.changeMonitorTab("v")
                     }
                   app.status.runningSim = false;
+                  app.state.sim = true;
                   console.log("updated ", Date.now() - t0)
             })
             .catch(function (error) {
@@ -924,14 +979,41 @@ var app = new Vue({
 
         // Tutorials
 
-        tutorialNext: function() {
-            this.tutorial.step ++;
-            $('.flashing').removeClass('flashing');
-            for (var f of this.tutorialStep.flashing) {
+        tutorialSetup: function(step, substepFlag) {
+            for (var f of step.flashing || []) {
                 $(f).addClass('flashing');
             }
-            if (!(this.tutorialStep.btn)) {
-                this.tutorialPoll(this.tutorialStep.condition);
+            if ("setup" in step) {
+                step.setup();
+            }
+            if (!(step.btn)) {
+                this.tutorialPoll(step.condition, substepFlag);
+            }
+            if (step.substeps) {
+                let currentSubstep = step.substeps[step.substep];
+                this.tutorialSetup(currentSubstep, true);
+            }
+        },
+
+        tutorialTeardown: function() {
+            $('.flashing').removeClass('flashing');
+        },
+
+        tutorialNext: function(substepFlag) {
+            // TODO: workaround for substepFlag fix
+            console.log("tutorialNext called!");
+            this.tutorialTeardown();
+            if (substepFlag == true) {
+                console.log("substep!", substepFlag);
+                // Check there are enough steps
+                if (this.tutorialStep.substeps && this.tutorialStep.substep < (this.tutorialStep.substeps.length - 1)) {
+                    this.tutorialStep.substep ++;
+                    let currentSubstep = this.tutorialStep.substeps[this.tutorialStep.substep];
+                    this.tutorialSetup(currentSubstep, true);
+                }
+            } else {
+                this.tutorial.step ++;
+                this.tutorialSetup(this.tutorialStep);
             }
         },
 
@@ -940,13 +1022,13 @@ var app = new Vue({
             this.closePopups();
         },
 
-        tutorialPoll: function(condition) {
-            console.log("Polling...");
+        tutorialPoll: function(condition, substepFlag) {
+            console.log("Polling...", substepFlag);
             if (condition()) {
                 console.log("Advancing...");
-                this.tutorialNext();
+                this.tutorialNext(substepFlag);
             } else {
-                setTimeout(function(){app.tutorialPoll(condition);}, 500);
+                let t = setTimeout(function(){app.tutorialPoll(condition, substepFlag);}, 500);
             }
         },
 
@@ -957,7 +1039,8 @@ var app = new Vue({
             $('#tutorial-list-container').removeClass('show');
             this.$nextTick(function(){
                 $( "#tutorial-popup-container" ).draggable({
-                      handle: "#tutorial-header"
+                      handle: "#tutorial-header",
+                      containment: "#popup-container"
                     });
             });
         }

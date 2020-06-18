@@ -2,28 +2,34 @@
 
 Next up
 -------
-
-
-- Synapses
-    - Push
-        - check model files
-
-- PUSH
-    - cleanup saved
+    
 
 - Tutorial
     - Threshold
+        - rewrite
         - duration
     - 2 tutorials
 
-    - substeps
-    - Simulation run conditions
-    - teardown and setup steps
-        - teardown on close, setup on open
+   
+
     - Panel
         - Complete signs
         - Progress bars
     - Store on user db
+
+Bugs
+- Fix vix toggle line
+- Spike viz colors
+- Amplitude plot
+- Stop plots from relying on Soma
+- Viz rename neurons
+
+Connections
+- Draw
+
+- Harmonize burger menus
+
+- Email Lara & Pam
 
 
 - Check NiA Simulations
@@ -32,21 +38,11 @@ Next up
 - 201 Notes
 
 
-
-- Connectivity Matrix
-
 - Lara neuro stuff
     - Hyperpolarization .. cation current
     - H-current
 
 - Write up report
-
-Bugs
-- Fix vix toggle line
-- Spike viz colors
-- Amplitude plot
-- Stop plots from relying on Soma
-- Viz rename neurons
 
 
 Questions
@@ -65,8 +61,6 @@ Categorized
 - showMenu bug
 
 ### Neuroscience
-- Check NiA simulations
-- G-proteins (2)
 - Plasticity (STDP) (3)
 
 - ING network
@@ -74,11 +68,9 @@ Categorized
     - should change osciallation frequency
 
 ### Tutorials
-- Tutorial interface (2)
 - Inhibition of synaptic potential (3)
 
 ### Stimuli
-
 - Exist on canvas (2)
 - Refactor
     - Classes
@@ -90,7 +82,6 @@ Categorized
 
 ### Neurons
 
-- point processes (1)
 - Represent in canvas (2)
     - edit 
     - move
@@ -103,6 +94,9 @@ Categorized
     - Reversal potentials for individual ions
     - Globals (e.g. kbath)
         - Push to simulation tab?
+- Indicator (4)
+    - Focus on click
+    - dynamic size
 
 #### Neuron editor
 
@@ -148,13 +142,16 @@ Categorized
 
 
 ### Connections
-- Chloride ion synapse (1)
-- Connection Matrix (1)
 - Draw on canvas (2)
 - Select source section/location
 - Double check units
 - Refactor connection code
 - More types of synapse
+- Connectivity Matrix
+    - dynamic sizing
+    - remove
+    - indicate conn type
+    - drag resizable
 
 
 ### Recording
@@ -256,6 +253,7 @@ Later
     - tests
     - Validate params frontend
     - Check units
+    - v-for keys
 
 - Layout
     - SVG elements stay in order while dragging

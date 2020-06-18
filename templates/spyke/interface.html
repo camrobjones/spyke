@@ -462,7 +462,9 @@
 
                         <div v-for='(connection, index) in connections' class='config-item-container'>
 
-                            <div class='config-item-header-container' onclick="toggleHideNext(this);">
+                            <div class='config-item-header-container'
+                                 onclick="toggleHideNext(this);"
+                                 :id="'con-header-'+connection.gid">
                                 <h5 class='config-item-header'>
                                 Connection [[index + 1]]
                                 </h5>
@@ -476,7 +478,8 @@
                                 </div>
                             </div>
 
-                            <div class='config-item-body-container collapse'>
+                            <div class='config-item-body-container collapse'
+                                 :id="'con-body-'+connection.gid">
 
                                 <!-- Source -->
                                 <div class="form-group sidebar-input-group row">
@@ -668,6 +671,89 @@
 
                     <div id='canvas-coord-container'>
                         <span id='canvas-coords'></span>
+                    </div>
+
+                    <!-- Indicator -->
+                    <div id='neuron-indicator-container' v-if="neurons.length"
+                         >
+                        <div id='neuron-indicator-toggle'
+                             @click="display.indicator = !display.indicator"
+                             :class="{ collapse: !display.indicator }">
+                            <i class="fas fa-chevron-down toggle-chevron"></i>
+                        </div>
+                        <div id='neuron-indicator-inner'
+                             :class="{ collapse: !display.indicator }">
+                            <div v-for='neuron in neurons' 
+                                 class='neuron-indicator'
+                                 @click="selectNeuron(neuron.gid)">
+                                 <div class='neuron-swatch' :style="{ backgroundColor: neuron.color }">
+                                 </div>
+                                 <span class='neuron-indicator-name'>[[neuron.name]]</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connectivity Matrix -->
+                    <div id='con-matrix'
+                         v-if="neurons.length"
+                         :class="{ collapse: !display.matrix }">
+
+                         <div id="con-matrix-toggle-container">
+                              <div id='con-matrix-toggle'
+                                 @click="display.matrix = !display.matrix"
+                                 :class="{ collapse: !display.matrix }">
+                                <i class="fas fa-chevron-down con-matrix-toggle-chevron"></i>
+                               </div>
+                         </div>
+
+                          <div id="con-matrix-inner">
+                            <!-- Row 1 -->
+                            <div class="con-matrix-row" id='con-matrix-row-1'>
+
+                                <!-- Cell 1 -->
+                                <div class="con-matrix-cell" id='con-matrix-cell-1'>
+                                    <div id='con-matrix-cell-1-inner'>
+                                        <div id='con-matrix-cell-1-target'>
+                                            <span>Target</span>
+                                        </div>
+                                        <div id='con-matrix-cell-1-source'>
+                                            <span>Source</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Column labels -->
+                                <div v-for='col in neurons' 
+                                     class="con-matrix-cell
+                                     con-matrix-header con-matrix-row-header" 
+                                     :key="col.gid"
+                                     :style="{ backgroundColor: col.color}">
+                                        [[col.gid]]
+                                </div>
+                            </div>
+
+                            <!-- Rows -->
+                            <div v-for="row in neurons"
+                                 :key="row.gid"
+                                 class="con-matrix-row">
+
+                                 <div class="con-matrix-cell con-matrix-header con-matrix-col-header"
+                                      :style="{ backgroundColor: row.color}">
+                                        [[row.gid]]
+                                 </div>
+
+                                 <div v-for="col in neurons"
+                                      :key="col.gid"
+                                      class="con-matrix-cell"
+                                      v-html="getConStatus(row.gid, col.gid)"
+                                      :class="['cell' + getConStatus(row.gid, col.gid)]"
+                                      @click="selectConnection(row.gid, col.gid)">
+                                 </div>
+
+                            </div>
+
+                          </div>
+
                     </div>
 
                 </div>
@@ -1362,6 +1448,23 @@
                 </div>
 
                 <div id='tutorial-body' v-html="tutorialStep.body">
+                </div>
+
+                <div id='tutorial-substeps' v-if='tutorialStep.substeps'>
+                    <div v-for='substep in tutorialStep.substeps'
+                         class='tutorial-substep-container'
+                         :key="substep.id">
+                         <span class='tutorial-substep-body'
+                               v-html="substep.body">
+                         </span>
+                         <div class='tutorial-substep-tick-container'
+                              :class="{ complete : substep.condition()}">
+                            <i class="far fa-circle tutorial-substep-incomplete"></i>
+                            <i class="fas fa-check-circle tutorial-substep-complete"></i>
+                            
+                         </div>
+                    </div>
+
                 </div>
 
                 <div id='tutorial-buttons'>

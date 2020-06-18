@@ -24,6 +24,7 @@ class SimConfig(models.Model):
     edited = models.DateTimeField(auto_now=True)
 
     def set_datafile(self):
+        """Construct filepast to save data from name"""
         self.datafile = os.path.join(SIMULATION_DIR, self.name + '.json')
 
     def save_config(self, config):
