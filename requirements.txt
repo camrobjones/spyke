@@ -1,3 +1,3 @@
 numpy==1.18.2
-Django==3.0.5
+Django==3.0.12
 neuron==7.2.536.16
